@@ -8,11 +8,13 @@
 #include "factdb.h"
 
 #define MAX_ACTION_NAME 64
+#define MAX_RULE_NAME 64
 #define MAX_RULES 1000
 
 typedef struct {
     Node* condition;
     char action[MAX_ACTION_NAME];
+    char ruleName[MAX_RULE_NAME];
 }Rule;
 
 typedef struct{
