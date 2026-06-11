@@ -13,13 +13,19 @@
 
 typedef struct {
     Node* condition;
-    char action[MAX_ACTION_NAME];
-    char ruleName[MAX_RULE_NAME];
+    char *action;
+    char *ruleName;
 }Rule;
 
 typedef struct{
-    Rule rules[MAX_RULES];
-    int ruleCount;
+    Rule *rules;
+    size_t ruleCount;
 } RuleEngine;
 
 void run(RuleEngine*, FactDB*);
+Rule* createRule(Node*, char*, char*);
+RuleEngine* createEngine();
+void addRule(RuleEngine*, Rule*);
+void deleteRule(Rule*);
+void deleteEngine(RuleEngine*);
+
