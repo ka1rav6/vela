@@ -1,3 +1,4 @@
+#include "rule.h"
 #include "jsonParser.h"
 
 /*
@@ -22,11 +23,23 @@
   ]
   }
  */
+bool fileExists(const char* filename) {
+    FILE* file = fopen(filename, "r");
+    if (file) {
+        fclose(file);
+        return true;
+    }
+    return false;
 
+}
 
 
 
 yyjson_doc* parseJSON(const char * file){
+    if (!fileExists(file)) {
+        printf("File not found: %s\n", file);
+        exit(1);
+    }
     yyjson_doc * doc = yyjson_read_file(file, 0, NULL, NULL);
     if (!doc){
         printf("Invalid JSON format!\n");
@@ -35,8 +48,46 @@ yyjson_doc* parseJSON(const char * file){
     return doc;
 }
 
+RuleEngine* build_ast(yyjson_doc* doc){
+    yyjson_val* root = yyjson_doc_get_root(doc);
+    if (!root || !yyjson_is_obj(root)) {
+        printf("Invalid root JSON\n");
+        return NULL;
+    }
 
+    yyjson_val* rulesArr =
+        yyjson_obj_get(root, "rules");
 
+    if (!rulesArr || !yyjson_is_arr(rulesArr)) {
+        printf("No rules array found\n");
+        return NULL;
+    }
+
+    RuleEngine* engine = createEngine();
+
+    size_t idx, max;
+    yyjson_val* rule;
+
+    yyjson_arr_foreach(rulesArr, idx, max, rule){
+        yyjson_val* nameVal = yyjson_obj_get(rule, "name");
+        yyjson_val* actionVal = yyjson_obj_get(rule, "action");
+
+        yyjson_val* condVal = yyjson_obj_get(rule, "if");
+        if (!nameVal || !actionVal || !condVal) {
+            printf("Invalid rule format\n");
+            continue;
+        }
+        Rule r;
+        r.ruleName = strdup(yyjson_get_str(nameVal));
+        r.action = strdup(yyjson_get_str(actionVal));
+        r.condition = build_node(condVal);
+        engine->rules = realloc( engine->rules, sizeof(Rule) * (engine->ruleCount + 1));
+        engine->rules[engine->ruleCount] = r;
+        engine->ruleCount++;
+    }
+
+    return engine;
+}
 
 Node* build_node(yyjson_val* v){
     // FACT STRING

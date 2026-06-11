@@ -8,6 +8,11 @@ add_executable(engine
     src/factdb.h 
     src/rule.c
     src/rule.h
-    src/ConditionTree.h)
+    src/ConditionTree.h
+    src/ConditionTree.c
+    src/testFuncs.c
+    src/jsonParser.c
+    src/jsonParser.h
+)
 
-target_link_libraries(app ${YYJSON_LIB})
+target_link_libraries(engine ${YYJSON_LIB})
