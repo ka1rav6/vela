@@ -64,31 +64,36 @@ typedef enum {
     TOK_RULE,
     TOK_FACT,
     TOK_COND,
-
-    TOK_AND,
-    TOK_OR,
-    TOK_NOT,
-
-    TOK_DOLLAR,
-
-    TOK_IDENT,
+    TOK_AND, // AND
+    TOK_OR, // OR
+    TOK_NOT, // NOT
+    TOK_DOLLAR, // $
+    TOK_IDENT, 
     TOK_NUMBER,
-
-    TOK_LT, TOK_GT,
-    TOK_LE, TOK_GE,
-    TOK_EQ, TOK_NE,
-
-    TOK_LPAREN,
-    TOK_RPAREN,
-
-    TOK_END
+    TOK_LT, TOK_GT, // < >
+    TOK_LE, TOK_GE, // <=  >=
+    TOK_EQ, TOK_NE, // ==  !=
+    TOK_LPAREN, // (
+    TOK_RPAREN, // )
+    TOK_END  // EOF
 } TokenType;
 
 typedef struct {
     TokenType type;
-    char text[64];   // for identifiers
+    char* text;   // for identifiers
     double number;   // for numeric values
 } Token;
+
+typedef struct SLexer{
+    const char* input;
+    size_t inputLen;
+    size_t pos;
+    size_t readPos;
+    char ch;
+}Lexer;
+
+void readChar(Lexer* l);
+Lexer* initLexer(const char*);
 
     
 Program* readFile(const char* file); // reads a file and converts it into a program;  
