@@ -1,4 +1,5 @@
 
+#include "factdb.h"
 #include "rule.h"
 #include "jsonParser.h"
 
@@ -39,13 +40,38 @@ void printAST(Node* n, int depth){
             break;
     }
 }
+void printFactDB(FactDB* db)
+{
+    printf("=== FACT DB ===\n");
 
+    printf("\n[BOOL FACTS]\n");
+    for (size_t i = 0; i < db->boolCount; i++)
+    {
+        printf("  %s = %s\n",
+            db->boolFacts[i].name,
+            db->boolFacts[i].val ? "true" : "false");
+    }
+
+    printf("\n[NUM FACTS]\n");
+    for (size_t i = 0; i < db->numCount; i++)
+    {
+        printf("  %s = %.2f\n",
+            db->numFacts[i].name,
+            db->numFacts[i].val);
+    }
+
+    printf("================\n\n");
+}
 
 int main(void){
     printf("Loading JSON...\n");
     yyjson_doc* doc = parseJSON("../src/test.json");
     printf("Building AST...\n");
-    RuleEngine* engine = build_ast(doc);
+    FactDB* db = createFactDB();
+    RuleEngine* engine = build_ast(doc, db);
+
+
+    printFactDB(db);
 
     printf("\n");
     for (size_t i = 0; i < engine->ruleCount; i++){
@@ -55,7 +81,10 @@ int main(void){
         printAST(engine->rules[i].condition, 1);
         printf("\n");
     }
-    yyjson_doc_free(doc);
+
+    run(engine, db);
+
     deleteEngine(engine);
+    deleteFactDB(db);
     return 0;
 }

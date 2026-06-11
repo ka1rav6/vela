@@ -48,20 +48,10 @@ yyjson_doc* parseJSON(const char * file){
     return doc;
 }
 
-RuleEngine* build_ast(yyjson_doc* doc){
+RuleEngine* build_ast(yyjson_doc* doc, FactDB* db) {
     yyjson_val* root = yyjson_doc_get_root(doc);
-    if (!root || !yyjson_is_obj(root)) {
-        printf("Invalid root JSON\n");
-        return NULL;
-    }
-
-    yyjson_val* rulesArr =
-        yyjson_obj_get(root, "rules");
-
-    if (!rulesArr || !yyjson_is_arr(rulesArr)) {
-        printf("No rules array found\n");
-        return NULL;
-    }
+    build_factdb(db, root);
+    yyjson_val* rulesArr = yyjson_obj_get(root, "rules");
 
     RuleEngine* engine = createEngine();
 
@@ -69,23 +59,22 @@ RuleEngine* build_ast(yyjson_doc* doc){
     yyjson_val* rule;
 
     yyjson_arr_foreach(rulesArr, idx, max, rule){
-        yyjson_val* nameVal = yyjson_obj_get(rule, "name");
-        yyjson_val* actionVal = yyjson_obj_get(rule, "action");
+        yyjson_val* name = yyjson_obj_get(rule, "name");
+        yyjson_val* action = yyjson_obj_get(rule, "action");
+        yyjson_val* cond = yyjson_obj_get(rule, "if");
+Rule r;
+        r.ruleName = strdup(yyjson_get_str(name));
+        r.action = strdup(yyjson_get_str(action));
+        r.condition = build_node(cond);
 
-        yyjson_val* condVal = yyjson_obj_get(rule, "if");
-        if (!nameVal || !actionVal || !condVal) {
-            printf("Invalid rule format\n");
-            continue;
-        }
-        Rule r;
-        r.ruleName = strdup(yyjson_get_str(nameVal));
-        r.action = strdup(yyjson_get_str(actionVal));
-        r.condition = build_node(condVal);
-        engine->rules = realloc( engine->rules, sizeof(Rule) * (engine->ruleCount + 1));
-        engine->rules[engine->ruleCount] = r;
-        engine->ruleCount++;
+        engine->rules = realloc(
+            engine->rules,
+            sizeof(Rule) * (engine->ruleCount + 1)
+        );
+
+        engine->rules[engine->ruleCount++] = r;
     }
-
+    yyjson_doc_free(doc);
     return engine;
 }
 
@@ -180,3 +169,26 @@ Node* build_not(yyjson_val* v){
     return n;
 }
 
+void build_factdb(FactDB* db, yyjson_val* root)
+{
+    yyjson_val* facts = yyjson_obj_get(root, "facts");
+
+    if (!facts || !yyjson_is_obj(facts))
+        return;
+
+    yyjson_obj_iter iter;
+    yyjson_obj_iter_init(facts, &iter);
+    yyjson_val *key, *val;
+
+    while ((key = yyjson_obj_iter_next(&iter))) {
+        const char* name = yyjson_get_str(key);
+        val = yyjson_obj_iter_get_val(key);
+
+        if (yyjson_is_bool(val)) {
+            setBoolFact(db, name, yyjson_get_bool(val));
+        }
+        else if (yyjson_is_int(val)){
+            setNumFact(db, name, (double)yyjson_get_int(val));
+        }
+    }
+}

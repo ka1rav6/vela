@@ -1,6 +1,7 @@
 #include "rule.h"
 
 void run(RuleEngine* e, FactDB* db){
+    printf("=== RUNNING RULE ENGINE ===\n");
     for (int i = 0; i < e->ruleCount; i ++){
         if (evaluate(db, e->rules[i].condition)){
             // TRIGGER THE ACTION
@@ -46,19 +47,20 @@ void deleteRule(Rule* r){
 
 void deleteEngine(RuleEngine* RE){
     for (int i = 0; i < RE->ruleCount; i++){
-        deleteRule(&RE->rules[i]);
+        deleteNode(RE->rules[i].condition);
+        free(RE->rules[i].action);
+        RE->rules[i].action = NULL;
+        free(RE->rules[i].ruleName);
+        RE->rules[i].ruleName = NULL;
     }
+    free(RE->rules);
+    RE->rules = NULL;
     free(RE);
     RE = NULL;
 }
 
-
-
-
-
-
-
-
-
-
-
+void addRule(RuleEngine* e, Rule* r){
+    e->rules = (Rule*)realloc(e->rules, sizeof(Rule) * (e->ruleCount + 1));
+    e->rules[e->ruleCount] = *r;
+    e->ruleCount++;
+}

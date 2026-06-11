@@ -9,12 +9,12 @@
 #define NOT_FOUND NAN
 
 typedef struct{
-    char name[MAX_NAME] ;
+    char *name;
     double val;
 } NumFact;
 
 typedef struct{
-    char name[MAX_NAME];
+    char *name;
     bool val;
 } BoolFact;
 
@@ -25,7 +25,10 @@ typedef struct{
     size_t numCount;
 }FactDB;
 
-double getNumFact(FactDB* db, const char* name);
-bool getBoolFact(FactDB* db, const char* name);
-
-bool evaluate(FactDB* db, Node* n);
+double getNumFact(FactDB*, const char*);
+bool getBoolFact(FactDB*, const char*);
+bool evaluate(FactDB*, Node*);
+FactDB*createFactDB();
+void deleteFactDB(FactDB*);
+void setBoolFact(FactDB*, const char*, bool);
+void setNumFact(FactDB* db, const char*, double);
