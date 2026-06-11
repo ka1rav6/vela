@@ -27,6 +27,11 @@ TokenType nextToken(Lexer* l){
             t = TOK_DOLLAR;
         case EOF:
             t = TOK_END;
+        case '(':
+            t = TOK_LPAREN;
+        case ')':
+            t = TOK_RPAREN;
+
         // ALL OTHER CASES REQUIRE MORE THAN ONE LETTER 
 
 
