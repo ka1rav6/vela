@@ -13,6 +13,8 @@ add_executable(engine
     src/testFuncs.c
     src/jsonParser.c
     src/jsonParser.h
+    src/semanticChecker.c
+    src/semanticChecker.h
 )
 
 target_link_libraries(engine ${YYJSON_LIB})
