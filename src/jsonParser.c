@@ -1,5 +1,6 @@
 #include "rule.h"
 #include "jsonParser.h"
+#include "semanticChecker.h"
 
 /*
  * Checks if file exists in file system 
@@ -91,7 +92,10 @@ Node* build_node(yyjson_val* v){
     while ((key = yyjson_obj_iter_next(&iter))){
         const char* op = yyjson_get_str(key);
         yyjson_val* val = yyjson_obj_iter_get_val(key);
-
+        if (!isOperator(op)){
+            fprintf(stderr, "Not a valid operator : %s\n", op);
+            perror("");
+        }
         if (strcmp(op, "and") == 0)
             return build_and(val);
 
@@ -195,6 +199,9 @@ void build_factdb(FactDB* db, yyjson_val* root)
         }
         else if (yyjson_is_int(val)){
             setNumFact(db, name, (double)yyjson_get_int(val));
+        }
+        else if (yyjson_is_real(val)){
+            setNumFact(db, name, yyjson_get_real(val));
         }
     }
 }
