@@ -2,26 +2,11 @@
 #include "jsonParser.h"
 
 /*
+ * Checks if file exists in file system 
+ * by manually opening it and checking
  *
- * ASSUMED JSON STRUCTURE:
- * {
-  "facts": {
-    "isAdmin": true,
-    "age": 25
-  },
-  "rules": [
-    {
-      "name": "canAccessDashboard",
-      "action": "ALLOW_DASHBOARD",
-      "if": {
-        "and": [
-          "isAdmin",
-          { ">": ["age", 18] }
-        ]
-      }
-    }
-  ]
-  }
+ * @param : filename (string)
+ * @return : [bool] : true (file exists) && false (file does not exist)
  */
 bool fileExists(const char* filename) {
     FILE* file = fopen(filename, "r");
@@ -33,50 +18,65 @@ bool fileExists(const char* filename) {
 
 }
 
-
-
+/*
+ * Parses the json with the yyjson method
+ * 
+ * @param : filename (string)
+ * @return : a pointer to the yyjson doc
+ */
 yyjson_doc* parseJSON(const char * file){
     if (!fileExists(file)) {
         printf("File not found: %s\n", file);
-        exit(1);
+        exit(1); // exist if file does not exist
     }
     yyjson_doc * doc = yyjson_read_file(file, 0, NULL, NULL);
     if (!doc){
         printf("Invalid JSON format!\n");
-        exit(1);
+        exit(1); // exit if the JSON format is incorrect
     }
     return doc;
 }
 
+/*
+ * the main AST (rule engine is built here)
+ * parses the json doc and calls a function to build the fact database (hence passed as reference)
+ * and creates the rule and adds it to the engine
+ *
+ * @param 1 : the yyjson_doc ptr that stores all the json data to be parsed
+ * @param 2 : pointer to the fact DB that is changed in place.
+ * @return : the complete engine (AST)
+ */
 RuleEngine* build_ast(yyjson_doc* doc, FactDB* db) {
     yyjson_val* root = yyjson_doc_get_root(doc);
-    build_factdb(db, root);
+    build_factdb(db, root); // builds the fact database
+    
+    // RULE ENGINE CREATION: 
     yyjson_val* rulesArr = yyjson_obj_get(root, "rules");
-
+    // init engine
     RuleEngine* engine = createEngine();
 
-    size_t idx, max;
+    size_t idx = 0, max = 0; // assigned in the foreach loop below
     yyjson_val* rule;
 
     yyjson_arr_foreach(rulesArr, idx, max, rule){
-        yyjson_val* name = yyjson_obj_get(rule, "name");
+        yyjson_val* name = yyjson_obj_get(rule, "name"); // get key = "name" here
         yyjson_val* action = yyjson_obj_get(rule, "action");
         yyjson_val* cond = yyjson_obj_get(rule, "if");
-Rule r;
+
+        Rule r;
         r.ruleName = strdup(yyjson_get_str(name));
         r.action = strdup(yyjson_get_str(action));
         r.condition = build_node(cond);
-
-        engine->rules = realloc(
-            engine->rules,
-            sizeof(Rule) * (engine->ruleCount + 1)
-        );
-
-        engine->rules[engine->ruleCount++] = r;
+        
+        addRule(engine, &r);
     }
-    yyjson_doc_free(doc);
+    yyjson_doc_free(doc); // free it as it is no longer needed: everything is now stored in the AST
     return engine;
 }
+
+/*
+ * 
+ */
 
 Node* build_node(yyjson_val* v){
     // FACT STRING
