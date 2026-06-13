@@ -18,6 +18,10 @@ typedef struct{
     bool val;
 } BoolFact;
 
+typedef enum{
+    BOOL, NUM
+}factType;
+
 typedef struct{
     BoolFact boolFacts[MAX_FACTS];
     NumFact numFacts[MAX_FACTS];

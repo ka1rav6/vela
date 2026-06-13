@@ -26,3 +26,21 @@ bool isComparisonCorrect(FactDB* db, const char* factname){
     }
     return true;
 }
+
+bool factExists(FactDB* db, const char* fact, factType t){
+    switch (t){
+        case BOOL:
+            for (int i = 0 ; i < db->boolCount; i++){
+                if (strcmp(db->boolFacts[i].name, fact) == 0)
+                    return true;
+            }
+            break;
+        case NUM:
+            for (int i = 0 ; i < db->numCount; i++){
+                if (strcmp(db->numFacts[i].name, fact) == 0)
+                    return true;
+            }
+            break;
+    }
+    return false;
+}

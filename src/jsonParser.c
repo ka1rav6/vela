@@ -27,12 +27,12 @@ bool fileExists(const char* filename) {
  */
 yyjson_doc* parseJSON(const char * file){
     if (!fileExists(file)) {
-        printf("File not found: %s\n", file);
+       fprintf(stderr, "File not found: %s\n", file);
         exit(1); // exist if file does not exist
     }
     yyjson_doc * doc = yyjson_read_file(file, 0, NULL, NULL);
     if (!doc){
-        printf("Invalid JSON format!\n");
+        fprintf(stderr, "Invalid JSON format!\n");
         exit(1); // exit if the JSON format is incorrect
     }
     return doc;
@@ -120,6 +120,10 @@ Node* build_node(FactDB* db, yyjson_val* v){
 Node* build_fact(FactDB* db, yyjson_val* v){
     Node* n = createNode(NODE_FACT);
     n->data.Fact.factName = strdup(yyjson_get_str(v));
+    if (!factExists(db, n->data.Fact.factName, BOOL) && !factExists(db, n->data.Fact.factName, NUM)){
+        fprintf(stderr, "The fact : %s , does not exist but is used", n->data.Fact.factName);
+        perror("");
+    }
     return n;
 }
 
@@ -129,28 +133,23 @@ Node* build_compare(FactDB* db, const char* op, yyjson_val* arr){
     yyjson_val* left = yyjson_arr_get(arr, 0);
     yyjson_val* right = yyjson_arr_get(arr, 1);
     n->data.Compare.factName = strdup(yyjson_get_str(left));
-    printf("fact = %s\n", yyjson_get_str(left)); 
     if (!isComparisonCorrect(db, n->data.Compare.factName)){
         fprintf(stderr, "Incorrect: Tried comparing bool with number : %s", n->data.Compare.factName);
         perror("");
     }
         
     if (yyjson_is_int(right)) {
-        printf("rhs int = %lld\n",
-           (long long)yyjson_get_int(right));
-
        n->data.Compare.val = yyjson_get_int(right);
     }
     if (yyjson_is_real(right)) {
-        printf("rhs real = %f\n",
-           yyjson_get_real(right));
-
         n->data.Compare.val = yyjson_get_real(right);
     }
 
-    printf("stored rhs = %f\n", n->data.Compare.val);
     if (isnan(n->data.Compare.val))
-        printf("Invalid comparison value for fact '%s'\n", n->data.Compare.factName);
+    {
+        fprintf(stderr, "Invalid comparison value for fact '%s'\n", n->data.Compare.factName);
+        perror("");
+    }
     if (strcmp(op, ">") == 0) n->data.Compare.op = OP_GT;
     else if (strcmp(op, "<") == 0) n->data.Compare.op = OP_LT;
     else if (strcmp(op, ">=") == 0) n->data.Compare.op = OP_GE;

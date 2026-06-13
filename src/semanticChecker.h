@@ -9,3 +9,4 @@
 
 bool isOperator(const char*);
 bool isComparisonCorrect(FactDB*, const char*);
+bool factExists(FactDB*, const char*, factType);
