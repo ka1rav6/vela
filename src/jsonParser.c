@@ -68,7 +68,10 @@ RuleEngine* build_ast(yyjson_doc* doc, FactDB* db) {
         r.ruleName = strdup(yyjson_get_str(name));
         r.action = strdup(yyjson_get_str(action));
         r.condition = build_node(db, cond);
-        
+        if (!duplicateRule(engine, r.ruleName)){
+            fprintf(stderr, "Two different rules have the same name : %s", r.ruleName);
+            perror("");
+        }
         addRule(engine, &r);
     }
     yyjson_doc_free(doc); // free it as it is no longer needed: everything is now stored in the AST
