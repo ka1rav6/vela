@@ -1,6 +1,12 @@
 #include "factdb.h"
 #include "uthash.h"
 
+/*
+ * gets the value of a numeric fact from the fact DB by searching for its name
+ * @param 1 : pointer to the fact DB (to search for the fact)
+ * @param 2 : name of the fact (string)
+ * @return : value of the fact (double) or NOT_FOUND (NAN) if the fact does not exist
+*/
 double getNumFact(FactDB* db, const char* name){
     NumFact* f;
     HASH_FIND_STR(db->numFacts, name, f);
@@ -9,7 +15,7 @@ double getNumFact(FactDB* db, const char* name){
     }
     return f->val;
 }
-
+// Similar to getNumFact but for boolean facts
 bool getBoolFact(FactDB* db, const char* name){
     BoolFact* f;
     HASH_FIND_STR(db->boolFacts, name, f);
@@ -18,7 +24,12 @@ bool getBoolFact(FactDB* db, const char* name){
     }
     return f->val;
 }
-
+/*
+ * evaluates a node in the AST by recursively evaluating its children and applying the appropriate logic
+ * @param 1 : pointer to the fact DB (to access fact values)
+ * @param 2 : pointer to the node to be evaluated
+ * @return : result of the evaluation (boolean)
+ */
 bool evaluate(FactDB* db, Node* n){
     switch(n->type){
         case NODE_AND:
@@ -54,7 +65,7 @@ bool evaluate(FactDB* db, Node* n){
 
 }
 
-
+// constructor for factDB 
 FactDB* createFactDB(){
     FactDB* temp = (FactDB*)malloc(sizeof(FactDB));
     if (temp == NULL){
@@ -66,6 +77,8 @@ FactDB* createFactDB(){
     temp->numFacts = NULL;
     return temp;
 }
+
+// destructor for factDB that frees all the memory allocated for the facts and the fact DB itself
 void deleteFactDB(FactDB* db){
     NumFact *currNum, *tempNum;
     HASH_ITER(hh, db->numFacts, currNum, tempNum){
@@ -78,12 +91,19 @@ void deleteFactDB(FactDB* db){
         free(currBool);
     }
     currBool = NULL;
-    tempBool = NULL;
+    tempBool = NULL; // to prevent dangling ptrs
     currNum = NULL;
     tempNum = NULL;
     free(db);
-    db = NULL;
+    db = NULL;// to prevent dangling ptrs
 }
+
+/*
+ * sets the value of a fact in the fact DB by searching for its name and UPDATING THE VALUE IF IT EXISTS, or adding a new fact if it does not exist
+ * @param 1 : pointer to the fact DB (to search for the fact and update/add it)
+ * @param 2 : name of the fact (string)
+ * @param 3 : value of the fact (bool or double) 
+*/
 void setBoolFact(FactDB* db, const char* name, bool val){
     BoolFact *f;
     HASH_FIND_STR(db->boolFacts, name, f);
@@ -97,6 +117,8 @@ void setBoolFact(FactDB* db, const char* name, bool val){
     f->val = val;
     HASH_ADD_STR(db->boolFacts, name, f);
 }
+
+// Similar to setBoolFact but for numeric facts
 void setNumFact(FactDB* db, const char* name, double val){
     NumFact* f;
     HASH_FIND_STR(db->numFacts, name, f);

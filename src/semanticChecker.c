@@ -1,16 +1,8 @@
 #include "semanticChecker.h"
 #include "rule.h"
 #include "uthash.h"
-/*
- * checks to include:
- * 1. factname not in db but in expression [ COMPLETED ]
- * 2. unknown operator [ COMPLETED ]
- * 3. duplicate rule names [ COMPLETED ]
- * 4. and of "age" and "isAdmin" (for example) [ COMPLETED ]
- * 5. empty expressions : "and" : []  [ COMPLETED ]
- * 6. missing action / condition / name [ COMPLETED ]
- */
 
+// checks if the operator is valid
 bool isOperator(const char* op){
     const char* ops[9] = {">=", "<=","==", "!=", ">", "<", "and", "or", "not"};
     for (int i = 0; i < 9; i++){
@@ -29,7 +21,7 @@ bool isComparisonCorrect(FactDB* db, const char* factname){
         return true;
     return false;
 }
-
+// checks if the fact exists in the database already
 bool factExists(FactDB* db, const char* fact, factType t){
     switch (t){
         case BOOL:{
@@ -45,13 +37,20 @@ bool factExists(FactDB* db, const char* fact, factType t){
     }
     return false;
 }
-
+// checks if the rule name already exists in the database ()
 bool duplicateRule(RuleEngine* e, const char* name){
     Rule* r;
     HASH_FIND_STR(e->rules, name, r);
     return (bool)r;
 }
 
+
+
+/*
+ * checks if the array contains a mix of bool and num facts
+ * usage : to check if by accident a user is comparing a bool fact to a num fact or vice versa
+ * e.g. "fact1" > "fact2" where fact1 is a bool and fact2 is a num
+*/
 bool isMixedBoolNumArray(FactDB* db, yyjson_val* arr){
     size_t len = yyjson_arr_size(arr);
     bool hasBool = false;
@@ -70,6 +69,11 @@ bool isMixedBoolNumArray(FactDB* db, yyjson_val* arr){
     return false;
 }
 
+/*
+ * checks if the array is empty or undersized
+ * usage : to check if a user is trying to apply an operator to an insufficient number of operands
+ * e.g. "not" operator applied to an empty array or an array with more than 1 element
+*/
 bool isEmptyOrUndersizedArray(yyjson_val* arr, const char* op){
     size_t len = yyjson_arr_size(arr);
     if (strcmp(op, "not") == 0)

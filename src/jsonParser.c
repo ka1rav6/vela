@@ -93,7 +93,10 @@ RuleEngine* build_ast(yyjson_doc* doc, FactDB* db) {
 }
 
 /*
- * 
+ * main node builder function that checks the type of the node to be built and calls the appropriate function to build it
+ * @param 1 : pointer to the fact DB (to passing on to functions that need it to check for fact existence and type etc..)
+ * @param 2 : pointer to the yyjson_val that represents the node to be built
+ * @return : pointer to the built node 
  */
 
 Node* build_node(FactDB* db, yyjson_val* v){
@@ -135,6 +138,13 @@ Node* build_node(FactDB* db, yyjson_val* v){
     }
     return NULL;
 }
+
+/*
+ * builds the fact node by checking if the fact exists in the fact DB and storing its name in the node
+ * @param 1 : pointer to the fact DB (to check for fact existence)
+ * @param 2 : pointer to the yyjson_val that represents the fact (string)
+ * @return : pointer to the built fact node
+*/
 Node* build_fact(FactDB* db, yyjson_val* v){
     Node* n = createNode(NODE_FACT);
     n->data.Fact.factName = strdup(yyjson_get_str(v));
@@ -145,7 +155,14 @@ Node* build_fact(FactDB* db, yyjson_val* v){
     }
     return n;
 }
-
+/*
+ * builds the compare node by checking the operator and the operands and storing them in the node
+ * also checks for the validity of the comparison (e.g. comparing a bool fact with a number is not valid)
+ * @param 1 : pointer to the fact DB (to check for fact existence and type)
+ * @param 2 : operator (string)
+ * @param 3 : pointer to the yyjson_val that represents the array of operands (left and right)
+ * @return : pointer to the built compare node
+ */    
 Node* build_compare(FactDB* db, const char* op, yyjson_val* arr){
     Node* n = createNode(NODE_COMPARE);
     n->data.Compare.val = NAN;  
@@ -163,7 +180,7 @@ Node* build_compare(FactDB* db, const char* op, yyjson_val* arr){
     if (yyjson_is_real(right))
         n->data.Compare.val = (double)yyjson_get_real(right);
 
-    if (isnan(n->data.Compare.val)){
+    if (isnan(n->data.Compare.val)){ // NOT_FOUND is a preprocessor macro that is define as NAN, hence NAN is checked using isnan() function from math.
         fprintf(stderr, "Invalid comparison value (NAN) for fact '%s'\n", n->data.Compare.factName);
         perror("");
         exit(EXIT_FAILURE);
@@ -178,6 +195,10 @@ Node* build_compare(FactDB* db, const char* op, yyjson_val* arr){
     return n;
 }
 
+/*
+ * builds the and/or nodes by iterating through the array of conditions and building the left and right nodes recursively
+ * USED TO BE TWO FUNCTIONS BUT THEY WERE VERY SIMILAR SO I COMBINED THEM INTO ONE FUNCTION AND PASSED THE TYPE OF OPERATOR AS A PARAMETER
+*/
 Node* build_and_or(FactDB* db, yyjson_val* arr, Type t){
     const char* opName = (t == NODE_AND) ? "and" : "or";
     if (isEmptyOrUndersizedArray(arr, opName)){
@@ -200,7 +221,9 @@ Node* build_and_or(FactDB* db, yyjson_val* arr, Type t){
     }
     return left;
 }
-
+/*
+ * builds the not node 
+*/
 Node* build_not(FactDB* db, yyjson_val* v){
     if (yyjson_is_arr(v) && isEmptyOrUndersizedArray(v, "not")){
         fprintf(stderr, "Empty array for 'not'\n");
@@ -210,7 +233,11 @@ Node* build_not(FactDB* db, yyjson_val* v){
     n->data.unary.child = build_node(db, v);
     return n;
 }
-
+/*
+ * builds the fact database by iterating through the "facts" object in the json and adding each fact to the database with its value and type
+ * @param 1 : pointer to the fact DB that is changed in place.
+ * @param 2 : pointer to the yyjson_val that represents the root of the json doc (to access the "facts" object)
+*/
 void build_factdb(FactDB* db, yyjson_val* root){
     yyjson_val* facts = yyjson_obj_get(root, "facts");
 

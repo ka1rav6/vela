@@ -1,5 +1,6 @@
 #include "ConditionTree.h"
 
+// Node destructor that recursively frees the memory allocated for the nodes in the AST
 void deleteNode(Node* n){
     switch (n->type){
         case (NODE_AND) :
@@ -24,6 +25,7 @@ void deleteNode(Node* n){
     n = NULL;
 }
 
+// Node constructor that allocates memory for a new node and initializes its type and data
 Node* createNode(Type t){
     Node* temp = (Node*)malloc(sizeof(Node));
     if (temp == NULL){

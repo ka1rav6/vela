@@ -14,13 +14,13 @@
 typedef struct {
     Node* condition;
     char *action;
-    char ruleName[MAX_NAME];
+    char ruleName[MAX_RULE_NAME];
 
-    UT_hash_handle hh;
+    UT_hash_handle hh; // makes this structure hashable [implemented using uthash]
 }Rule;
 
 typedef struct{
-    Rule *rules;
+    Rule *rules; // a hash table of rules, where the key is the rule name and the value is the Rule struct
 } RuleEngine;
 
 void run(RuleEngine*, FactDB*);
