@@ -47,12 +47,12 @@ yyjson_doc* parseJSON(const char * file){
  * @return : the complete engine (AST)
  */
 RuleEngine* build_ast(yyjson_doc* doc, FactDB* db) {
+    // 1. Builds the fact DB:
     yyjson_val* root = yyjson_doc_get_root(doc);
-    build_factdb(db, root); // builds the fact database
+    build_factdb(db, root);
     
-    // RULE ENGINE CREATION: 
+    // 2. RULE ENGINE CREATION: 
     yyjson_val* rulesArr = yyjson_obj_get(root, "rules");
-    // init engine
     RuleEngine* engine = createEngine();
 
     size_t idx = 0, max = 0; // assigned in the foreach loop below
@@ -63,11 +63,13 @@ RuleEngine* build_ast(yyjson_doc* doc, FactDB* db) {
         if (!name){
             fprintf(stderr, "A RULE DOES NOT HAVE A NAME!\n");
             perror("");
+            exit(EXIT_FAILURE);
         }
         yyjson_val* action = yyjson_obj_get(rule, "action");
         if (!action){
             fprintf(stderr, "The action for the rule name %s does not exist\n", yyjson_get_str(name));
             perror("");
+            exit(EXIT_FAILURE);
         }
         yyjson_val* cond = yyjson_obj_get(rule, "if");
         if (!cond){
@@ -81,6 +83,7 @@ RuleEngine* build_ast(yyjson_doc* doc, FactDB* db) {
         if (duplicateRule(engine, r.ruleName)){
             fprintf(stderr, "Two different rules have the same name : %s", r.ruleName);
             perror("");
+            exit(EXIT_FAILURE);
         }
         addRule(engine, &r);
     }
@@ -108,6 +111,7 @@ Node* build_node(FactDB* db, yyjson_val* v){
         if (!isOperator(op)){
             fprintf(stderr, "Not a valid operator : %s\n", op);
             perror("");
+            exit(EXIT_FAILURE);
         }
         if (strcmp(op, "and") == 0)
             return build_and_or(db, val, NODE_AND);
@@ -136,6 +140,7 @@ Node* build_fact(FactDB* db, yyjson_val* v){
     if (!factExists(db, n->data.Fact.factName, BOOL) && !factExists(db, n->data.Fact.factName, NUM)){
         fprintf(stderr, "The fact : %s , does not exist but is used\n", n->data.Fact.factName);
         perror("");
+        exit(EXIT_FAILURE);
     }
     return n;
 }
@@ -149,6 +154,7 @@ Node* build_compare(FactDB* db, const char* op, yyjson_val* arr){
     if (!isComparisonCorrect(db, n->data.Compare.factName)){
         fprintf(stderr, "Incorrect: Tried comparing bool with number : %s\n", n->data.Compare.factName);
         perror("");
+        exit(EXIT_FAILURE);
     }
     if (yyjson_is_int(right))
        n->data.Compare.val = yyjson_get_int(right);
@@ -157,8 +163,9 @@ Node* build_compare(FactDB* db, const char* op, yyjson_val* arr){
         n->data.Compare.val = yyjson_get_real(right);
 
     if (isnan(n->data.Compare.val)){
-        fprintf(stderr, "Invalid comparison value for fact '%s'\n", n->data.Compare.factName);
+        fprintf(stderr, "Invalid comparison value (NAN) for fact '%s'\n", n->data.Compare.factName);
         perror("");
+        exit(EXIT_FAILURE);
     }
     if (strcmp(op, ">") == 0) n->data.Compare.op = OP_GT;
     else if (strcmp(op, "<") == 0) n->data.Compare.op = OP_LT;
@@ -171,6 +178,15 @@ Node* build_compare(FactDB* db, const char* op, yyjson_val* arr){
 }
 
 Node* build_and_or(FactDB* db, yyjson_val* arr, Type t){
+    const char* opName = (t == NODE_AND) ? "and" : "or";
+    if (isEmptyOrUndersizedArray(arr, opName)){
+        fprintf(stderr, "Empty or single-element array for '%s'\n", opName);
+        exit(EXIT_FAILURE);
+    }
+    if (isMixedBoolNumArray(db, arr)){
+        fprintf(stderr, "Mixed bool/num facts in '%s' expression\n", opName);
+        exit(EXIT_FAILURE);
+    }
     size_t len = yyjson_arr_size(arr);
 
     Node* left = build_node(db, yyjson_arr_get(arr, 0));
@@ -185,6 +201,10 @@ Node* build_and_or(FactDB* db, yyjson_val* arr, Type t){
 }
 
 Node* build_not(FactDB* db, yyjson_val* v){
+    if (yyjson_is_arr(v) && isEmptyOrUndersizedArray(v, "not")){
+        fprintf(stderr, "Empty array for 'not'\n");
+        exit(EXIT_FAILURE);
+    }
     Node* n = createNode(NODE_NOT);
     n->data.unary.child = build_node(db, v);
     return n;
@@ -204,14 +224,13 @@ void build_factdb(FactDB* db, yyjson_val* root){
         const char* name = yyjson_get_str(key);
         val = yyjson_obj_iter_get_val(key);
 
-        if (yyjson_is_bool(val)) {
+        if (yyjson_is_bool(val))
             setBoolFact(db, name, yyjson_get_bool(val));
-        }
-        else if (yyjson_is_int(val)){
+
+        else if (yyjson_is_int(val))
             setNumFact(db, name, (double)yyjson_get_int(val));
-        }
-        else if (yyjson_is_real(val)){
+
+        else if (yyjson_is_real(val))
             setNumFact(db, name, yyjson_get_real(val));
-        }
     }
 }
