@@ -1,4 +1,4 @@
-
+#include "uthash.h"
 #include "factdb.h"
 #include "rule.h"
 #include "jsonParser.h"
@@ -45,21 +45,15 @@ void printFactDB(FactDB* db)
     printf("=== FACT DB ===\n");
 
     printf("\n[BOOL FACTS]\n");
-    for (size_t i = 0; i < db->boolCount; i++)
-    {
-        printf("  %s = %s\n",
-            db->boolFacts[i].name,
-            db->boolFacts[i].val ? "true" : "false");
+    BoolFact* bf, *tmp;
+    HASH_ITER(hh, db->boolFacts, bf, tmp){
+        printf("%s = %d\n", bf->name, bf->val);
     }
-
     printf("\n[NUM FACTS]\n");
-    for (size_t i = 0; i < db->numCount; i++)
-    {
-        printf("  %s = %.2f\n",
-            db->numFacts[i].name,
-            db->numFacts[i].val);
+    NumFact* nf, *temp;
+    HASH_ITER(hh, db->numFacts, nf, temp){
+        printf("%s = %.2f\n", nf->name, nf->val);
     }
-
     printf("================\n\n");
 }
 
@@ -74,11 +68,12 @@ int main(void){
     printFactDB(db);
 
     printf("\n");
-    for (size_t i = 0; i < engine->ruleCount; i++){
-        printf("Rule Name: %s\n", engine->rules[i].ruleName);
-        printf("Action: %s\n", engine->rules[i].action);
+    Rule* r, *temp;
+    HASH_ITER(hh, engine->rules, r, temp){
+        printf("Rule Name: %s\n", r->ruleName);
+        printf("Action: %s\n", r->action);
         printf("Condition AST:\n");
-        printAST(engine->rules[i].condition, 1);
+        printAST(r->condition, 1);
         printf("\n");
     }
 

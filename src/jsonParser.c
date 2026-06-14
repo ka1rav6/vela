@@ -76,16 +76,17 @@ RuleEngine* build_ast(yyjson_doc* doc, FactDB* db) {
             fprintf(stderr, "The rule : %s, does not contain a condition!\n", yyjson_get_str(name));
         }
 
-        Rule r;
-        r.ruleName = strdup(yyjson_get_str(name));
-        r.action = strdup(yyjson_get_str(action));
-        r.condition = build_node(db, cond);
-        if (duplicateRule(engine, r.ruleName)){
-            fprintf(stderr, "Two different rules have the same name : %s", r.ruleName);
+        Rule* r = (Rule*)malloc(sizeof(Rule));
+        memset(r, 0, sizeof(Rule));
+        strcpy(r->ruleName, yyjson_get_str(name));
+        r->action = strdup(yyjson_get_str(action));
+        r->condition = build_node(db, cond);
+        if (duplicateRule(engine, r->ruleName)){
+            fprintf(stderr, "Two different rules have the same name : %s", r->ruleName);
             perror("");
             exit(EXIT_FAILURE);
         }
-        addRule(engine, &r);
+        addRule(engine, r);
     }
     yyjson_doc_free(doc); // free it as it is no longer needed: everything is now stored in the AST
     return engine;

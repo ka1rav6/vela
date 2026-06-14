@@ -14,12 +14,13 @@
 typedef struct {
     Node* condition;
     char *action;
-    char *ruleName;
+    char ruleName[MAX_NAME];
+
+    UT_hash_handle hh;
 }Rule;
 
 typedef struct{
     Rule *rules;
-    size_t ruleCount;
 } RuleEngine;
 
 void run(RuleEngine*, FactDB*);

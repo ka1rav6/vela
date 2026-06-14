@@ -1,5 +1,7 @@
 #pragma once
 
+#include "uthash.h"
+
 #include <string.h>
 #include <math.h>
 // custom includes
@@ -9,13 +11,17 @@
 #define NOT_FOUND NAN
 
 typedef struct{
-    char *name;
+    char name[MAX_NAME];
     double val;
-} NumFact;
+
+    UT_hash_handle hh;
+} NumFact; 
 
 typedef struct{
-    char *name;
+    char name[MAX_NAME];
     bool val;
+
+    UT_hash_handle hh;
 } BoolFact;
 
 typedef enum{
@@ -23,10 +29,8 @@ typedef enum{
 }factType;
 
 typedef struct{
-    BoolFact boolFacts[MAX_FACTS];
-    NumFact numFacts[MAX_FACTS];
-    size_t boolCount;
-    size_t numCount;
+    BoolFact* boolFacts;
+    NumFact* numFacts;
 }FactDB;
 
 double getNumFact(FactDB*, const char*);

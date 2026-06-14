@@ -1,5 +1,6 @@
 #include "semanticChecker.h"
 #include "rule.h"
+#include "uthash.h"
 /*
  * checks to include:
  * 1. factname not in db but in expression [ COMPLETED ]
@@ -21,38 +22,34 @@ bool isOperator(const char* op){
 
 
 bool isComparisonCorrect(FactDB* db, const char* factname){
-    for (int i = 0; i < db->boolCount; i++){
-        if (strcmp(db->boolFacts[i].name, factname) == 0){
-            return false;
-        }
-    }
-    return true;
+    // checking if factname [ a numfact ] is being compared to a bool
+    BoolFact* f;
+    HASH_FIND_STR(db->boolFacts, factname, f);
+    if (!f)
+        return true;
+    return false;
 }
 
 bool factExists(FactDB* db, const char* fact, factType t){
     switch (t){
-        case BOOL:
-            for (int i = 0 ; i < db->boolCount; i++){
-                if (strcmp(db->boolFacts[i].name, fact) == 0)
-                    return true;
-            }
-            break;
-        case NUM:
-            for (int i = 0 ; i < db->numCount; i++){
-                if (strcmp(db->numFacts[i].name, fact) == 0)
-                    return true;
-            }
-            break;
+        case BOOL:{
+            BoolFact* f;
+            HASH_FIND_STR(db->boolFacts, fact, f);
+            return (bool)f;
+        }
+        case NUM:{
+            NumFact* f;
+            HASH_FIND_STR(db->numFacts, fact, f);
+            return (bool)f;
+        }
     }
     return false;
 }
 
 bool duplicateRule(RuleEngine* e, const char* name){
-    for (int i = 0; i < e->ruleCount; i++){
-        if (strcmp(e->rules[i].ruleName, name) == 0)
-            return true;
-    }
-    return false;
+    Rule* r;
+    HASH_FIND_STR(e->rules, name, r);
+    return (bool)r;
 }
 
 bool isMixedBoolNumArray(FactDB* db, yyjson_val* arr){

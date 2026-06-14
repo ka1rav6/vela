@@ -1,7 +1,9 @@
 {
     "facts": {
         "isAdmin": true,
-        "age": 10.53
+        "age": 10.53,
+        "isRegular" : false,
+        "balance" : 1000
     },
     "rules": [
         {
@@ -12,6 +14,18 @@
                     "isAdmin",
                     {
                         ">": ["age", 18]
+                    }
+                ]
+            }
+        },
+        {
+            "name" : "canBuyStuff",
+            "action" : "ADD_TO_CART",
+            "if" : {
+                    "or" : ["isRegular" , {
+                        ">=": [
+                            "balance", 1000
+                        ] 
                     }
                 ]
             }
