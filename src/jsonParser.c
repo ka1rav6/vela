@@ -16,7 +16,6 @@ bool fileExists(const char* filename) {
         return true;
     }
     return false;
-
 }
 
 /*
@@ -61,14 +60,25 @@ RuleEngine* build_ast(yyjson_doc* doc, FactDB* db) {
 
     yyjson_arr_foreach(rulesArr, idx, max, rule){
         yyjson_val* name = yyjson_obj_get(rule, "name"); // get key = "name" here
+        if (!name){
+            fprintf(stderr, "A RULE DOES NOT HAVE A NAME!\n");
+            perror("");
+        }
         yyjson_val* action = yyjson_obj_get(rule, "action");
+        if (!action){
+            fprintf(stderr, "The action for the rule name %s does not exist\n", yyjson_get_str(name));
+            perror("");
+        }
         yyjson_val* cond = yyjson_obj_get(rule, "if");
+        if (!cond){
+            fprintf(stderr, "The rule : %s, does not contain a condition!\n", yyjson_get_str(name));
+        }
 
         Rule r;
         r.ruleName = strdup(yyjson_get_str(name));
         r.action = strdup(yyjson_get_str(action));
         r.condition = build_node(db, cond);
-        if (!duplicateRule(engine, r.ruleName)){
+        if (duplicateRule(engine, r.ruleName)){
             fprintf(stderr, "Two different rules have the same name : %s", r.ruleName);
             perror("");
         }
@@ -100,10 +110,10 @@ Node* build_node(FactDB* db, yyjson_val* v){
             perror("");
         }
         if (strcmp(op, "and") == 0)
-            return build_and(db, val);
+            return build_and_or(db, val, NODE_AND);
 
         if (strcmp(op, "or") == 0)
-            return build_or(db, val);
+            return build_and_or(db, val, NODE_OR);
 
         if (strcmp(op, "not") == 0)
             return build_not(db, val);
@@ -124,7 +134,7 @@ Node* build_fact(FactDB* db, yyjson_val* v){
     Node* n = createNode(NODE_FACT);
     n->data.Fact.factName = strdup(yyjson_get_str(v));
     if (!factExists(db, n->data.Fact.factName, BOOL) && !factExists(db, n->data.Fact.factName, NUM)){
-        fprintf(stderr, "The fact : %s , does not exist but is used", n->data.Fact.factName);
+        fprintf(stderr, "The fact : %s , does not exist but is used\n", n->data.Fact.factName);
         perror("");
     }
     return n;
@@ -137,19 +147,16 @@ Node* build_compare(FactDB* db, const char* op, yyjson_val* arr){
     yyjson_val* right = yyjson_arr_get(arr, 1);
     n->data.Compare.factName = strdup(yyjson_get_str(left));
     if (!isComparisonCorrect(db, n->data.Compare.factName)){
-        fprintf(stderr, "Incorrect: Tried comparing bool with number : %s", n->data.Compare.factName);
+        fprintf(stderr, "Incorrect: Tried comparing bool with number : %s\n", n->data.Compare.factName);
         perror("");
     }
-        
-    if (yyjson_is_int(right)) {
+    if (yyjson_is_int(right))
        n->data.Compare.val = yyjson_get_int(right);
-    }
-    if (yyjson_is_real(right)) {
-        n->data.Compare.val = yyjson_get_real(right);
-    }
 
-    if (isnan(n->data.Compare.val))
-    {
+    if (yyjson_is_real(right))
+        n->data.Compare.val = yyjson_get_real(right);
+
+    if (isnan(n->data.Compare.val)){
         fprintf(stderr, "Invalid comparison value for fact '%s'\n", n->data.Compare.factName);
         perror("");
     }
@@ -163,26 +170,13 @@ Node* build_compare(FactDB* db, const char* op, yyjson_val* arr){
     return n;
 }
 
-Node* build_and(FactDB* db, yyjson_val* arr){
+Node* build_and_or(FactDB* db, yyjson_val* arr, Type t){
     size_t len = yyjson_arr_size(arr);
 
     Node* left = build_node(db, yyjson_arr_get(arr, 0));
     for (size_t i = 1; i < len; i++){
         Node* right = build_node(db, yyjson_arr_get(arr, i));
-        Node* parent = createNode(NODE_AND);
-        parent->data.op.left = left;
-        parent->data.op.right = right;
-        left = parent;
-    }
-    return left;
-}
-
-Node* build_or(FactDB* db, yyjson_val* arr){
-    size_t len = yyjson_arr_size(arr);
-    Node* left = build_node(db, yyjson_arr_get(arr, 0));
-    for (size_t i = 1; i < len; i++){
-        Node* right = build_node(db, yyjson_arr_get(arr, i));
-        Node* parent = createNode(NODE_OR);
+        Node* parent = createNode(t);
         parent->data.op.left = left;
         parent->data.op.right = right;
         left = parent;

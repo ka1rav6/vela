@@ -2,12 +2,12 @@
 #include "rule.h"
 /*
  * checks to include:
- * 1. factname not in db but in expression
- * 2. unknown operator
- * 3. duplicate rule names
+ * 1. factname not in db but in expression [ COMPLETED ]
+ * 2. unknown operator [ COMPLETED ]
+ * 3. duplicate rule names [ COMPLETED ]
  * 4. and of "age" and "isAdmin" (for example)
  * 5. empty expressions : "and" : []
- * 6. missing action
+ * 6. missing action / condition / name [ COMPLETED ]
  */
 
 bool isOperator(const char* op){
@@ -50,8 +50,10 @@ bool factExists(FactDB* db, const char* fact, factType t){
 
 bool duplicateRule(RuleEngine* e, const char* name){
     for (int i = 0; i < e->ruleCount; i++){
-        if (strcmp(e->rules[i].ruleName,name) == 0)
+        if (strcmp(e->rules[i].ruleName, name) == 0)
             return true;
     }
     return false;
 }
+
+
