@@ -1,19 +1,22 @@
 #include "factdb.h"
+#include "uthash.h"
 
 double getNumFact(FactDB* db, const char* name){
-    for (int i = 0; i < db->numCount; i++){
-        if (strcmp(db->numFacts[i].name, name) == 0)
-            return db->numFacts[i].val;
+    NumFact* f;
+    HASH_FIND_STR(db->numFacts, name, f);
+    if (!f){
+        return NOT_FOUND;
     }
-    return NOT_FOUND;
+    return f->val;
 }
 
 bool getBoolFact(FactDB* db, const char* name){
-    for (int i = 0; i < db->boolCount; i++){
-        if (strcmp(db->boolFacts[i].name, name) == 0)
-            return db->boolFacts[i].val;
+    BoolFact* f;
+    HASH_FIND_STR(db->boolFacts, name, f);
+    if (!f){
+        return false;
     }
-    return NOT_FOUND;
+    return f->val;
 }
 
 bool evaluate(FactDB* db, Node* n){
@@ -61,49 +64,51 @@ FactDB* createFactDB(){
         exit(1);
     }
     memset(temp, 0, sizeof(FactDB));
-    temp->boolCount = 0;
-    temp->numCount = 0;
+    temp->boolFacts = NULL;
+    temp->numFacts = NULL;
     return temp;
 }
 void deleteFactDB(FactDB* db){
-    for (int i = 0; i < db->boolCount; i++){
-        free(db->boolFacts[i].name);
-        db->boolFacts[i].name = NULL;
+    NumFact *currNum, *tempNum;
+    HASH_ITER(hh, db->numFacts, currNum, tempNum){
+        HASH_DEL(db->numFacts, currNum);
+        free(currNum);
     }
-    for (int i = 0; i < db->numCount; i++){
-        free(db->numFacts[i].name);
-        db->numFacts[i].name = NULL;
+    BoolFact* currBool, *tempBool;
+    HASH_ITER(hh, db->boolFacts, currBool, tempBool){
+        HASH_DEL(db->boolFacts, currBool);
+        free(currBool);
     }
+    currBool = NULL;
+    tempBool = NULL;
+    currNum = NULL;
+    tempNum = NULL;
     free(db);
     db = NULL;
 }
 void setBoolFact(FactDB* db, const char* name, bool val){
-    if (db->boolCount >= MAX_FACTS){
-        printf("BoolFact overflow: %s\n", name);
+    BoolFact *f;
+    HASH_FIND_STR(db->boolFacts, name, f);
+    if (f){
+        f->val = val; // updating the value if the name is found
         return;
     }
-    for (size_t i = 0; i < db->boolCount; i++){
-        if (strcmp(db->boolFacts[i].name, name) == 0){
-            db->boolFacts[i].val = val;
-            return;
-        }
-    }
-    db->boolFacts[db->boolCount].name = strdup(name);
-    db->boolFacts[db->boolCount].val = val;
-    db->boolCount++;
+    f = (BoolFact*) malloc(sizeof(BoolFact));
+    memset(f, 0, sizeof(BoolFact));
+    strcpy(f->name, name);
+    f->val = val;
+    HASH_ADD_STR(db->boolFacts, name, f);
 }
 void setNumFact(FactDB* db, const char* name, double val){
-    if (db->numCount >= MAX_FACTS){
-        printf("NumFact overflow: %s\n", name);
+    NumFact* f;
+    HASH_FIND_STR(db->numFacts, name, f);
+    if (f){
+        f->val = val; // updating the value if the name is found
         return;
     }
-    for (size_t i = 0; i < db->numCount; i++){
-        if (strcmp(db->numFacts[i].name, name) == 0){
-            db->numFacts[i].val = val;
-            return;
-        }
-    }
-    db->numFacts[db->numCount].name = strdup(name);
-    db->numFacts[db->numCount].val = val;
-    db->numCount++;
+    f = (NumFact*)malloc(sizeof(NumFact));
+    memset(f, 0, sizeof(NumFact));
+    strcpy(f->name, name);
+    f->val = val;
+    HASH_ADD_STR(db->numFacts, name, f);
 }

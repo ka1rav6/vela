@@ -1,4 +1,4 @@
-
+#include "uthash.h"
 #include "factdb.h"
 #include "rule.h"
 #include "jsonParser.h"
@@ -45,21 +45,15 @@ void printFactDB(FactDB* db)
     printf("=== FACT DB ===\n");
 
     printf("\n[BOOL FACTS]\n");
-    for (size_t i = 0; i < db->boolCount; i++)
-    {
-        printf("  %s = %s\n",
-            db->boolFacts[i].name,
-            db->boolFacts[i].val ? "true" : "false");
+    BoolFact* bf, *tmp;
+    HASH_ITER(hh, db->boolFacts, bf, tmp){
+        printf("%s = %d\n", bf->name, bf->val);
     }
-
     printf("\n[NUM FACTS]\n");
-    for (size_t i = 0; i < db->numCount; i++)
-    {
-        printf("  %s = %.2f\n",
-            db->numFacts[i].name,
-            db->numFacts[i].val);
+    NumFact* nf, *temp;
+    HASH_ITER(hh, db->numFacts, nf, temp){
+        printf("%s = %.2f", nf->name, nf->val);
     }
-
     printf("================\n\n");
 }
 
