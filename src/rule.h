@@ -35,4 +35,4 @@ RuleEngine* createEngine();
 void addRule(RuleEngine*, Rule*);
 void deleteRule(Rule*);
 void deleteEngine(RuleEngine*);
-void linkToRule(RuleEngine*, const char* name, Action_f); // name = rule name
+Rule* findRule(RuleEngine*, const char* name);

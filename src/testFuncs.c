@@ -1,6 +1,6 @@
 #include "uthash.h"
-#include "factdb.h"
-#include "rule.h"
+
+#include "engine.h"
 #include "jsonParser.h"
 
 // A SIMPLE TEST FILE TO TEST THE FUNCTIONALITY OF THE FACT DB AND THE AST BUILDING AND EVALUATION
@@ -60,30 +60,14 @@ void printFactDB(FactDB* db)
     }
     printf("================\n\n");
 }
+void canAccess(FactDB* db, void* ctx){
+    char *new = (char*) ctx;
+    printf("ITS CALLED : %s\n", new);
+}
 
 int main(void){
-    printf("Loading JSON...\n");
-    yyjson_doc* doc = parseJSON("../src/test.json");
-    printf("Building AST...\n");
-    FactDB* db = createFactDB();
-    RuleEngine* engine = build_ast(doc, db);
-
-
-    printFactDB(db);
-
-    printf("\n");
-    Rule* r, *temp;
-    HASH_ITER(hh, engine->rules, r, temp){
-        printf("Rule Name: %s\n", r->ruleName);
-        printf("Action: %s\n", r->action);
-        printf("Condition AST:\n");
-        printAST(r->condition, 1);
-        printf("\n");
-    }
-
-    run(engine, db);
-
-    deleteEngine(engine);
-    deleteFactDB(db);
+    Engine* e = createMainEngine(NULL, NULL, "./test.json");
+    linkToRule(e, "canAccessDashboard",  canAccess, "yayyy");
+    runMainEngine(e);
     return 0;
 }

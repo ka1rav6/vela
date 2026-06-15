@@ -8,5 +8,8 @@ typedef struct Engine{
 }Engine;
 
 Engine* createMainEngine(FactDB*, RuleEngine*, const char*);
-void destroyEngine(Engine*);
+void destroyMainEngine(Engine*);
 
+void linkToRule(Engine*, const char* name, Action_f, void* ); // name = rule name
+
+void runMainEngine(Engine*);

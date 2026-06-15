@@ -58,3 +58,10 @@ void deleteEngine(RuleEngine* RE){
 void addRule(RuleEngine* e, Rule* r){
     HASH_ADD_STR(e->rules, ruleName, r);
 }
+
+Rule* findRule(RuleEngine* e, const char * name){
+    Rule* r;
+    HASH_FIND_STR(e->rules, name, r);
+    if (r)
+        return r;
+}
