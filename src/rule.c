@@ -6,13 +6,13 @@ void run(RuleEngine* e, FactDB* db){
     Rule *cr, *tmp;
     HASH_ITER(hh, e->rules, cr, tmp){
         if (evaluate(db, cr->condition)){
-            // TRIGGER THE ACTION
+            cr->func(db, cr->ctx);
             printf("Action Triggered: %s\n", cr->action);
         }
     }
 }
 
-Rule* createRule(Node* n, char* action, char* name){
+Rule* createRule(Node* n, char* action, char* name, void* ctx){
     Rule* temp = (Rule*)malloc(sizeof(Rule));
     if (temp == NULL){
         printf("COULD NOT ALLOCATE SPACE FOR RULE\n");
@@ -22,6 +22,7 @@ Rule* createRule(Node* n, char* action, char* name){
     temp->condition = n;
     temp->action = action;
     strcpy(temp->ruleName, name);
+    temp->ctx = ctx;
     return temp;
 }
 

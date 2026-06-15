@@ -20,6 +20,7 @@ typedef struct {
     char *action;
     char ruleName[MAX_RULE_NAME];
     Action_f func;
+    void* ctx;
 
     UT_hash_handle hh; // makes this structure hashable [implemented using uthash]
 }Rule;
@@ -29,10 +30,9 @@ typedef struct{
 } RuleEngine;
 
 void run(RuleEngine*, FactDB*);
-Rule* createRule(Node*, char*, char*);
+Rule* createRule(Node*, char*, char*, void*);
 RuleEngine* createEngine();
 void addRule(RuleEngine*, Rule*);
 void deleteRule(Rule*);
 void deleteEngine(RuleEngine*);
 void linkToRule(RuleEngine*, const char* name, Action_f); // name = rule name
-void callFunc(Rule r);
