@@ -19,6 +19,8 @@ add_executable(engine
     src/semanticChecker.c
     src/semanticChecker.h
     src/uthash.h
+    src/engine.c
+    src/engine.h
 )
 
 target_link_libraries(engine ${YYJSON_LIB})

@@ -1,31 +1,277 @@
 {
     "facts": {
-        "isAdmin": true,
-        "age": 80,
-        "isRegular" : false,
-        "balance" : 1000
+        "isAdmin":        true,
+        "isRegular":      false,
+        "isBanned":       false,
+        "isPremium":      true,
+        "isVerified":     true,
+        "isGuest":        false,
+
+        "age":            25,
+        "balance":        1500,
+        "score":          42,
+        "temperature":    98.6,
+        "itemCount":      3,
+        "discount":       0,
+        "loginAttempts":  2,
+        "accountAgeDays": 365
     },
     "rules": [
         {
-            "name": "canAccessDashboard",
-            "action": "ALLOW_DASHBOARD",
+            "name": "rule_simple_bool_true",
+            "action": "SIMPLE_BOOL_FIRED",
+            "if": "isAdmin"
+        },
+
+        {
+            "name": "rule_simple_bool_false",
+            "action": "SHOULD_NOT_FIRE",
+            "if": "isBanned"
+        },
+
+        {
+            "name": "rule_compare_gt",
+            "action": "AGE_OVER_18",
+            "if": { ">": ["age", 18] }
+        },
+
+        {
+            "name": "rule_compare_lt",
+            "action": "SCORE_UNDER_100",
+            "if": { "<": ["score", 100] }
+        },
+
+        {
+            "name": "rule_compare_ge",
+            "action": "BALANCE_GE_1500",
+            "if": { ">=": ["balance", 1500] }
+        },
+
+        {
+            "name": "rule_compare_le",
+            "action": "LOGIN_ATTEMPTS_LE_5",
+            "if": { "<=": ["loginAttempts", 5] }
+        },
+
+        {
+            "name": "rule_compare_eq",
+            "action": "ITEM_COUNT_EQUALS_3",
+            "if": { "==": ["itemCount", 3] }
+        },
+
+        {
+            "name": "rule_compare_ne",
+            "action": "DISCOUNT_NOT_ZERO",
+            "if": { "!=": ["discount", 0] }
+        },
+
+        {
+            "name": "rule_compare_float",
+            "action": "FEVER_DETECTED",
+            "if": { ">": ["temperature", 98.0] }
+        },
+
+        {
+            "name": "rule_and_two",
+            "action": "ADMIN_AND_VERIFIED",
+            "if": {
+                "and": ["isAdmin", "isVerified"]
+            }
+        },
+
+        {
+            "name": "rule_or_two",
+            "action": "REGULAR_OR_PREMIUM",
+            "if": {
+                "or": ["isRegular", "isPremium"]
+            }
+        },
+
+        {
+            "name": "rule_not_bool",
+            "action": "NOT_BANNED",
+            "if": {
+                "not": "isBanned"
+            }
+        },
+
+        {
+            "name": "rule_not_bool_false",
+            "action": "SHOULD_NOT_FIRE_NOT",
+            "if": {
+                "not": "isAdmin"
+            }
+        },
+
+        {
+            "name": "rule_and_three",
+            "action": "ADMIN_VERIFIED_PREMIUM",
+            "if": {
+                "and": ["isAdmin", "isVerified", "isPremium"]
+            }
+        },
+
+        {
+            "name": "rule_or_three",
+            "action": "GUEST_OR_REGULAR_OR_ADMIN",
+            "if": {
+                "or": ["isGuest", "isRegular", "isAdmin"]
+            }
+        },
+
+        {
+            "name": "rule_and_with_compare",
+            "action": "ADULT_WITH_BALANCE",
+            "if": {
+                "and": [
+                    { ">": ["age", 18] },
+                    { ">=": ["balance", 1000] }
+                ]
+            }
+        },
+
+        {
+            "name": "rule_or_with_compare",
+            "action": "HIGH_SCORE_OR_PREMIUM",
+            "if": {
+                "or": [
+                    { ">": ["score", 100] },
+                    "isPremium"
+                ]
+            }
+        },
+
+        {
+            "name": "rule_not_with_compare",
+            "action": "NOT_HIGH_RISK_LOGIN",
+            "if": {
+                "not": { ">": ["loginAttempts", 10] }
+            }
+        },
+
+        {
+            "name": "rule_nested_and_or",
+            "action": "NESTED_AND_OR_FIRED",
             "if": {
                 "and": [
                     "isAdmin",
                     {
-                        ">": ["age", 18]
+                        "or": [
+                            { ">": ["balance", 500] },
+                            "isPremium"
+                        ]
                     }
                 ]
             }
         },
+
         {
-            "name" : "canBuyStuff",
-            "action" : "ADD_TO_CART",
-            "if" : {
-                    "or" : ["isRegular" , {
-                        ">=": [
-                            "balance", 1000
-                        ] 
+            "name": "rule_nested_or_and",
+            "action": "NESTED_OR_AND_FIRED",
+            "if": {
+                "or": [
+                    "isBanned",
+                    {
+                        "and": [
+                            "isVerified",
+                            { ">": ["age", 18] }
+                        ]
+                    }
+                ]
+            }
+        },
+
+        {
+            "name": "rule_deep_nesting",
+            "action": "DEEP_NEST_FIRED",
+            "if": {
+                "and": [
+                    "isAdmin",
+                    {
+                        "or": [
+                            {
+                                "and": [
+                                    { ">": ["age", 18] },
+                                    { "<": ["age", 65] }
+                                ]
+                            },
+                            "isPremium"
+                        ]
+                    },
+                    {
+                        "not": "isBanned"
+                    }
+                ]
+            }
+        },
+
+        {
+            "name": "rule_not_or",
+            "action": "NEITHER_BANNED_NOR_GUEST",
+            "if": {
+                "not": {
+                    "or": ["isBanned", "isGuest"]
+                }
+            }
+        },
+
+        {
+            "name": "rule_not_and",
+            "action": "NOT_BOTH_GUEST_AND_BANNED",
+            "if": {
+                "not": {
+                    "and": ["isGuest", "isBanned"]
+                }
+            }
+        },
+
+        {
+            "name": "rule_old_account_big_balance",
+            "action": "LOYAL_HIGH_SPENDER",
+            "if": {
+                "and": [
+                    { ">=": ["accountAgeDays", 300] },
+                    { ">": ["balance", 1000] }
+                ]
+            }
+        },
+
+        {
+            "name": "rule_range_check",
+            "action": "SCORE_IN_RANGE",
+            "if": {
+                "and": [
+                    { ">=": ["score", 0] },
+                    { "<=": ["score", 100] }
+                ]
+            }
+        },
+
+        {
+            "name": "rule_zero_discount_and_items",
+            "action": "NO_DISCOUNT_HAS_ITEMS",
+            "if": {
+                "and": [
+                    { "==": ["discount", 0] },
+                    { ">": ["itemCount", 0] }
+                ]
+            }
+        },
+
+        {
+            "name": "rule_complex_access",
+            "action": "FULL_ACCESS_GRANTED",
+            "if": {
+                "and": [
+                    "isAdmin",
+                    "isVerified",
+                    { "not": "isBanned" },
+                    { ">": ["age", 18] },
+                    {
+                        "or": [
+                            { ">=": ["balance", 500] },
+                            "isPremium"
+                        ]
                     }
                 ]
             }
