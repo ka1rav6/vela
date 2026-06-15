@@ -1,5 +1,6 @@
-#include "rule.c"
+#include "rule.h"
 #include "ConditionTree.h"
+#include "jsonParser.h"
 
 typedef struct Engine{
     FactDB* db;

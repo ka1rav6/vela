@@ -1,7 +1,7 @@
 #include "uthash.h"
 
 #include "engine.h"
-#include "jsonParser.h"
+// #include "jsonParser.h"
 
 // A SIMPLE TEST FILE TO TEST THE FUNCTIONALITY OF THE FACT DB AND THE AST BUILDING AND EVALUATION
 // PRINTING FUNCTIONS AND A MAIN FUNCTION (mainly for testing purposes) ARE ALSO INCLUDED HERE
@@ -66,7 +66,7 @@ void canAccess(FactDB* db, void* ctx){
 }
 
 int main(void){
-    Engine* e = createMainEngine(NULL, NULL, "./test.json");
+    Engine* e = createMainEngine(NULL, NULL, "../src/test.json");
     linkToRule(e, "canAccessDashboard",  canAccess, "yayyy");
     runMainEngine(e);
     return 0;

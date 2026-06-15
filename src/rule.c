@@ -6,8 +6,14 @@ void run(RuleEngine* e, FactDB* db){
     Rule *cr, *tmp;
     HASH_ITER(hh, e->rules, cr, tmp){
         if (evaluate(db, cr->condition)){
-            cr->func(db, cr->ctx);
-            printf("Action Triggered: %s\n", cr->action);
+            if (cr->func){
+                cr->func(db, cr->ctx);
+                printf("Action Triggered: %s\n", cr->action);
+            }
+            else{
+                printf("As no function is linked, no action was triggered"
+                        ". The action that should have been triggered was : %s\n", cr->action);
+            }
         }
     }
 }
@@ -64,4 +70,5 @@ Rule* findRule(RuleEngine* e, const char * name){
     HASH_FIND_STR(e->rules, name, r);
     if (r)
         return r;
+    return NULL;
 }

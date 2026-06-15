@@ -1,5 +1,4 @@
 #include "engine.h"
-#include "jsonParser.h"
 Engine* createMainEngine(FactDB* db, RuleEngine* e, const char* json_file){
     Engine* temp = (Engine*)malloc(sizeof(Engine));
     if (!temp){
@@ -10,8 +9,13 @@ Engine* createMainEngine(FactDB* db, RuleEngine* e, const char* json_file){
     memset(temp, 0, sizeof(Engine));
     if (e != NULL)
         temp->r_engine = e;
+    else{
+        temp->r_engine = createEngine();
+    }
     if (db != NULL)
         temp->db = db;
+    else
+        temp->db = createFactDB();
     if (json_file == NULL){
         fprintf(stderr, "ERROR: the engine cannot be created with a NULL json file\n");
         perror("");
@@ -32,6 +36,11 @@ void destroyMainEngine(Engine* e){
 
 void linkToRule(Engine* e, const char* name, Action_f f, void* ctx){
     Rule* r = findRule(e->r_engine, name);
+    if (!r) {
+        fprintf(stderr, "Rule %s not found\n", name);
+        perror("");
+        exit(EXIT_FAILURE);
+    }
     r->func = f;
     r->ctx = ctx;
 } // name = rule name

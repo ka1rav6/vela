@@ -1,7 +1,7 @@
 {
     "facts": {
         "isAdmin": true,
-        "age": 10.53,
+        "age": 80,
         "isRegular" : false,
         "balance" : 1000
     },
