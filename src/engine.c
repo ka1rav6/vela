@@ -1,1 +1,33 @@
+#include "engine.h"
+
+Engine* createMainEngine(FactDB* db, RuleEngine* e, const char* json_file){
+    Engine* temp = (Engine*)malloc(sizeof(Engine));
+    if (!temp){
+        fprintf(stderr, "The engine memory could not be allocated\n");
+        perror("");
+        exit(EXIT_FAILURE);
+    }
+    memset(temp, 0, sizeof(Engine));
+    if (e != NULL)
+        temp->r_engine = e;
+    if (db != NULL)
+        temp->db = db;
+    if (json_file == NULL){
+        fprintf(stderr, "ERROR: the engine cannot be created with a NULL json file\n");
+        perror("");
+        exit(EXIT_FAILURE);
+    }
+    temp->json_file = json_file;
+    return temp;
+}
+
+
+void destroyEngine(Engine* e){
+    deleteFactDB(e->db);
+    deleteEngine(e->r_engine);
+    free(e);
+    e = NULL;
+}
+
+
 

@@ -3,11 +3,10 @@
 
 typedef struct Engine{
     FactDB* db;
-    RuleEngine *r;
+    RuleEngine *r_engine;
     const char* json_file;
 }Engine;
 
-Engine* createMainEngine(const char*);
 Engine* createMainEngine(FactDB*, RuleEngine*, const char*);
 void destroyEngine(Engine*);
 
