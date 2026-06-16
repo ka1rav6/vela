@@ -142,7 +142,7 @@ int main(void){
     registerAction("SHOULD_NOT_FIRE_NOT", cb_should_not_fire, "SHOULD_NOT_FIRE_NOT (!isAdmin=false)");
 
     /* Engine creation — callbacks are wired automatically */
-    Engine* e = createMainEngine(NULL, NULL, "../src/test.json");
+    Engine* e = createMainEngine("../src/test.json");
 
     printf("\n=== FACT DATABASE ===\n");
     printFactDB(e->db);

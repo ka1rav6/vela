@@ -8,7 +8,7 @@ typedef struct Engine{
     const char* json_file;
 }Engine;
 
-Engine* createMainEngine(FactDB*, RuleEngine*, const char*);
+Engine* createMainEngine(const char*);
 void destroyMainEngine(Engine*);
 
 void linkToRule(Engine*, const char* name, Action_f, void* ); // name = rule name

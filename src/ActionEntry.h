@@ -15,5 +15,8 @@ typedef struct {
 static ActionEntry* g_registry = NULL;
 
 void registerAction(const char* action, Action_f func, void* ctx);
+void registerActions(ActionEntry*);
+ActionEntry* createEntry(const char* action, Action_f func, void* ctx);
 
 ActionEntry* lookupAction(const char* action); 
+void freeRegistry(void);
