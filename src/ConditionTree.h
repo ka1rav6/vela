@@ -1,8 +1,6 @@
 #pragma once
-#include <stdio.h>
-#include <stdlib.h>
-#include <stdbool.h>
-#include <string.h>
+
+#include "common.h"
 #include "arena.h"
 
 #define MAX_NAME 100

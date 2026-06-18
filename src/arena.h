@@ -1,7 +1,6 @@
 // arena.h
 #pragma once
-#include <stdio.h>
-#include <stdlib.h>
+#include "common.h"
 #include <string.h>
 #include <sys/mman.h>
 #include <stddef.h>

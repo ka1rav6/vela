@@ -22,6 +22,7 @@ add_executable(engine
     src/ActionEntry.h
     src/arena.c
     src/arena.h
+    src/common.h
 )
 
 # Debug + gprof profiling

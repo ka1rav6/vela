@@ -2,7 +2,8 @@
 
 #include "uthash.h"
 
-#include <string.h>
+#include "common.h"
+
 #include <math.h>
 // custom includes
 #include "ConditionTree.h"

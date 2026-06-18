@@ -1,10 +1,7 @@
 #pragma once
 
-#include <stdio.h>
-#include <stdlib.h>
+#include "common.h"
 #include <math.h>
-#include <stdbool.h>
-#include <stdarg.h>
 
 #include "arena.h"
 #include "factdb.h"
