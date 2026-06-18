@@ -1,3 +1,4 @@
+// arena.h
 #pragma once
 #include <stdio.h>
 #include <stdlib.h>
@@ -5,21 +6,17 @@
 #include <sys/mman.h>
 #include <stddef.h>
 
-// my own arena style memory allocator used ONLY in rule allocation and AST
-// As AST is sequential and is freed and created once.
-
 #define ARENA_ALIGNMENT 8
 
-typedef struct{
+typedef struct {
     size_t size;
     size_t used;
-    char* start;
-}Arena;
+    char*  start;
+} Arena;
 
-static inline size_t align_up(size_t n, size_t alignment);
-
-char* ask_memory(size_t);
-Arena* create_arena(size_t);
-
-void* arena_alloc(Arena*, size_t);
-void destroy_arena(Arena*);
+char* ask_memory(size_t size);
+Arena* createArena(size_t size);
+void* arena_alloc(Arena* ar, size_t size);
+char* arena_strdup(Arena* ar, const char* s);
+void arena_reset(Arena* ar);
+void destroyArena(Arena* ar);
