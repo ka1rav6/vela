@@ -1,4 +1,5 @@
 #include "rule.h"
+#include "arena.h"
 #include "uthash.h"
 
 void runRuleEngine(RuleEngine* e, FactDB* db){
@@ -18,26 +19,17 @@ void runRuleEngine(RuleEngine* e, FactDB* db){
     }
 }
 
-Rule* createRule(Node* n, char* action, char* name, void* ctx){
-    Rule* temp = (Rule*)malloc(sizeof(Rule));
-    if (temp == NULL){
-        printf("COULD NOT ALLOCATE SPACE FOR RULE\n");
-        exit(1);
-    }
-    memset(temp, 0, sizeof(Rule));
+Rule* createRule(RuleEngine* e, Node* n, char* action, char* name, void* ctx){
+    Rule* temp = (Rule*)arena_alloc(e->arena, sizeof(Rule));
     temp->condition = n;
-    temp->action = action;
+    temp->action = arena_strdup(e->arena, action); // Safely allocate action string in the arena
     strcpy(temp->ruleName, name);
     temp->ctx = ctx;
     return temp;
 }
 
 void deleteRule(Rule* r){
-    deleteNode(r->condition);
-    free(r->action);
-    r->action = NULL;
-    free(r);
-    r = NULL;
+    // Intentionally empty. Managed via RuleEngine teardown.
 }
 
 RuleEngine* createRuleEngine(){
@@ -52,9 +44,13 @@ RuleEngine* createRuleEngine(){
 }
 
 void deleteRuleEngine(RuleEngine* RE){
+    if (!RE) return;
+    Rule *current_rule, *tmp;
+    HASH_ITER(hh, RE->rules, current_rule, tmp) {
+        HASH_DEL(RE->rules, current_rule);
+    }
     destroyArena(RE->arena);
     free(RE);
-    RE = NULL;
 }
 
 void addRule(RuleEngine* e, Rule* r){
@@ -64,7 +60,6 @@ void addRule(RuleEngine* e, Rule* r){
 Rule* findRule(RuleEngine* e, const char * name){
     Rule* r;
     HASH_FIND_STR(e->rules, name, r);
-    if (r)
-        return r;
+    if (r) return r;
     return NULL;
 }

@@ -33,9 +33,8 @@ typedef struct{
 } RuleEngine;
 
 void runRuleEngine(RuleEngine*, FactDB*);
-Rule* createRule(Node*, char*, char*, void*);
+Rule* createRule(RuleEngine*, Node*, char*, char*, void*);
 RuleEngine* createRuleEngine();
 void addRule(RuleEngine*, Rule*);
-void deleteRule(Rule*);
 void deleteRuleEngine(RuleEngine*);
 Rule* findRule(RuleEngine*, const char* name);

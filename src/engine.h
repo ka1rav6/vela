@@ -3,6 +3,7 @@
 #include "ConditionTree.h"
 #include "jsonParser.h"
 #include "ActionEntry.h"
+#include "arena.h"
 
 typedef struct Engine{
     FactDB* db;
