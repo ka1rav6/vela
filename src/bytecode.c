@@ -90,3 +90,37 @@ static bool runCompare(FactDB* db, Instr* i){
     }
     return false;
 }
+
+bool runBytecode(FactDB* db, Bytecode* bc){
+    bool stack[64];
+    int sp = 0;
+    for (int pc = 0; pc < bc->count; pc++){
+        Instr* i = &bc->code[pc];
+        switch (i->op){
+            case OP_PUSH_FACT:
+                stack[sp++] = getBoolFact(db, i->factName);
+                break;
+            case OP_PUSH_CMP:
+                stack[sp++] = runCompare(db, i);
+                break;
+            case OP_AND: {
+                bool b = stack[--sp];
+                bool a = stack[--sp];
+                stack[sp++] = a && b;
+                break;
+            }
+            case OP_OR: {
+                bool b = stack[--sp];
+                bool a = stack[--sp];
+                stack[sp++] = a || b;
+                break;
+            }
+            case OP_NOT:
+                stack[sp - 1] = !stack[sp - 1];
+                break;
+            case OP_HALT:
+                return stack[sp - 1];
+        }
+    }
+    return false;
+}
