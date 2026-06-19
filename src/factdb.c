@@ -112,6 +112,9 @@ void setBoolFact(FactDB* db, const char* name, bool val){
     }
     f = (BoolFact*) malloc(sizeof(BoolFact));
     memset(f, 0, sizeof(BoolFact));
+    if (strlen(name) > MAX_NAME){
+        FATAL("Cannot have a fact name that exceeds the cound of %d letters. The action : %s does.", MAX_NAME, name);
+    }
     strcpy(f->name, name);
     f->val = val;
     HASH_ADD_STR(db->boolFacts, name, f);
@@ -127,6 +130,9 @@ void setNumFact(FactDB* db, const char* name, double val){
     }
     f = (NumFact*)malloc(sizeof(NumFact));
     memset(f, 0, sizeof(NumFact));
+    if (strlen(name) > MAX_NAME){
+        FATAL("Cannot have a fact name that exceeds the cound of %d letters. The action : %s does.", MAX_NAME, name);
+    }
     strcpy(f->name, name);
     f->val = val;
     HASH_ADD_STR(db->numFacts, name, f);

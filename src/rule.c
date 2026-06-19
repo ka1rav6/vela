@@ -23,6 +23,9 @@ Rule* createRule(RuleEngine* e, Node* n, char* action, char* name, void* ctx){
     Rule* temp = (Rule*)arena_alloc(e->arena, sizeof(Rule));
     temp->condition = n;
     temp->action = arena_strdup(e->arena, action); // Safely allocate action string in the arena
+    if (strlen(name) > MAX_RULE_NAME){
+        FATAL("Cannot have a fact name that exceeds the cound of %d letters. The action : %s does.", MAX_NAME, name);
+    }
     strcpy(temp->ruleName, name);
     temp->ctx = ctx;
     return temp;

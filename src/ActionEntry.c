@@ -3,6 +3,9 @@
 void registerAction(ActionEntry** g_registry, const char* action, Action_f func, void* ctx) {
     ActionEntry* e = malloc(sizeof(ActionEntry));
     memset(e, 0, sizeof(ActionEntry));
+    if (strlen(action) > MAX_ACTION_NAME){
+        FATAL("Cannot have an action name that exceeds the cound of %d letters. The action : %s does.", MAX_ACTION_NAME, action);
+    }
     strcpy(e->action, action);
     e->func = func;
     e->ctx  = ctx;

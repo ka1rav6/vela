@@ -66,6 +66,9 @@ RuleEngine* build_ast(yyjson_doc* doc, FactDB* db, ActionEntry* g_registry){
 
         Rule* r = (Rule*)arena_alloc(engine->arena, sizeof(Rule));
         memset(r, 0, sizeof(Rule));
+        if (strlen(yyjson_get_str(name)) > MAX_NAME){
+            FATAL("Cannot have a fact name that exceeds the cound of %d letters. The action : %s does.", MAX_NAME, yyjson_get_str(name));
+        }
         strcpy(r->ruleName, yyjson_get_str(name));
         r->action = arena_strdup(engine->arena, yyjson_get_str(action));
         
