@@ -1,12 +1,13 @@
 #include "../include/rule.h"
 #include "../include/arena.h"
 #include "../include/uthash.h"
+#include "../include/bytecode.h"
 
 void runRuleEngine(RuleEngine* e, FactDB* db){
     printf("=== RUNNING RULE ENGINE ===\n");
     Rule *cr, *tmp;
     HASH_ITER(hh, e->rules, cr, tmp){
-        if (evaluate(db, cr->condition)){
+        if (runBytecode(db, cr->bc)){
             if (cr->func){
                 cr->func(db, cr->ctx);
                 printf("Action Triggered: %s\n", cr->action);
@@ -22,10 +23,8 @@ void runRuleEngine(RuleEngine* e, FactDB* db){
 Rule* createRule(RuleEngine* e, Node* n, char* action, char* name, void* ctx){
     Rule* temp = (Rule*)arena_alloc(e->arena, sizeof(Rule));
     temp->condition = n;
+    temp->bc = compileNode(e->arena, n);
     temp->action = arena_strdup(e->arena, action); // Safely allocate action string in the arena
-    if (strlen(name) > MAX_RULE_NAME){
-        FATAL("Cannot have a fact name that exceeds the cound of %d letters. The action : %s does.", MAX_NAME, name);
-    }
     strcpy(temp->ruleName, name);
     temp->ctx = ctx;
     return temp;
