@@ -19,3 +19,45 @@ static void emit(Arena* ar, Bytecode* bc, Instr i){
     }
     bc->code[bc->count++] = i;
 }
+
+static void compileWalk(Arena* ar, Bytecode* bc, Node* n){
+    switch(n->type){
+        case NODE_AND:{
+            compileWalk(ar, bc, n->data.op.left);
+            compileWalk(ar, bc, n->data.op.right);
+            Instr i;
+            i.op = OP_AND;
+            emit(ar, bc, i);
+            break;
+        }
+        case NODE_OR:{
+            compileWalk(ar, bc, n->data.op.left);
+            compileWalk(ar, bc, n->data.op.right);
+            Instr i;
+            i.op = OP_OR;
+            emit(ar, bc, i);
+            break;
+        }
+        case NODE_NOT:{
+            compileWalk(ar, bc, n->data.unary.child);
+            Instr i;
+            i.op = OP_NOT;
+            emit(ar, bc, i);
+        }
+        case NODE_FACT:{
+            Instr i;
+            i.op = OP_PUSH_FACT;
+            i.factName = n->data.Fact.factName;
+            emit(ar, bc, i);
+            break;
+        }
+        case NODE_COMPARE:{
+            Instr i;
+            i.op = OP_PUSH_CMP;
+            i.factName = n->data.Compare.factName;
+            i.cmp = n->data.Compare.op;
+            i.val = n->data.Compare.val;
+            emit(ar, bc, i);
+        }
+    }
+}
