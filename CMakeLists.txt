@@ -5,24 +5,25 @@ find_library(YYJSON_LIB yyjson REQUIRED)
 
 add_executable(engine
     src/factdb.c
-    include/factdb.h
     src/rule.c
-    include/rule.h
-    include/ConditionTree.h
     src/ConditionTree.c
     src/testFuncs.c
     src/jsonParser.c
-    include/jsonParser.h
     src/semanticChecker.c
-    include/semanticChecker.h
-    include/uthash.h
     src/engine.c
-    include/engine.h
     src/ActionEntry.c
-    include/ActionEntry.h
     src/arena.c
+    include/uthash.h
+    include/ConditionTree.h
+    include/factdb.h
+    include/engine.h
+    include/rule.h
+    include/semanticChecker.h
+    include/ActionEntry.h
+    include/jsonParser.h
     include/arena.h
     include/common.h
+    include/common.h.gch
 )
 
 # Debug + gprof profiling

@@ -1,11 +1,12 @@
-
-#pragma once
+#ifndef COMMON_H
+#define COMMON_H
 
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdbool.h>
 #include <string.h>
 #include <errno.h>
+#include <assert.h>
 
 #define FATAL(fmt, ...)                           \
     do {                                          \
@@ -13,3 +14,6 @@
         fprintf(stderr, ": %s\n", strerror(errno)); \
         exit(EXIT_FAILURE);                       \
     } while (0)
+
+
+#endif
