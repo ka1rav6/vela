@@ -1,6 +1,7 @@
 #include "../include/rule.h"
 #include "../include/jsonParser.h"
 #include "../include/semanticChecker.h"
+#include "../include/bytecode.h"
 
 /*
  * Checks if file exists in file system 
@@ -66,9 +67,6 @@ RuleEngine* build_ast(yyjson_doc* doc, FactDB* db, ActionEntry* g_registry){
 
         Rule* r = (Rule*)arena_alloc(engine->arena, sizeof(Rule));
         memset(r, 0, sizeof(Rule));
-        if (strlen(yyjson_get_str(name)) > MAX_NAME){
-            FATAL("Cannot have a fact name that exceeds the cound of %d letters. The action : %s does.", MAX_NAME, yyjson_get_str(name));
-        }
         strcpy(r->ruleName, yyjson_get_str(name));
         r->action = arena_strdup(engine->arena, yyjson_get_str(action));
         
@@ -78,6 +76,7 @@ RuleEngine* build_ast(yyjson_doc* doc, FactDB* db, ActionEntry* g_registry){
             r->ctx  = ae->ctx;
         }
         r->condition = build_node(engine->arena, db, cond);
+        r->bc = compileNode(engine->arena, r->condition);
         if (duplicateRule(engine, r->ruleName)){
             FATAL("Two different rules have the same name : %s", r->ruleName);
         }
