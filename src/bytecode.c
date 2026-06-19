@@ -61,3 +61,32 @@ static void compileWalk(Arena* ar, Bytecode* bc, Node* n){
         }
     }
 }
+
+
+Bytecode* compileNode(Arena* ar, Node* n){
+    Bytecode* bc = createBytecode(ar);
+    compileWalk(ar, bc, n);
+    Instr i;
+    i.op = OP_HALT;
+    emit(ar, bc, i);
+    return bc;
+}
+static bool runCompare(FactDB* db, Instr* i){
+    double lhs = getNumFact(db, i->factName);
+    double rhs = i->val;
+    switch (i->cmp){
+        case OP_LT:
+            return lhs < rhs;
+        case OP_GT:
+            return lhs > rhs;
+        case OP_LE:
+            return lhs <= rhs;
+        case OP_GE:
+            return lhs >= rhs;
+        case OP_EQ:
+            return lhs == rhs;
+        case OP_NE:
+            return lhs != rhs;
+    }
+    return false;
+}
