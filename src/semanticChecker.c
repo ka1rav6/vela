@@ -14,7 +14,7 @@ bool isOperator(const char* op){
 
 
 bool isComparisonCorrect(FactDB* db, const char* factname){
-    // checking if factname [ a numfact ] is being compared to a bool
+    // checking if factname [ a numfact ] is being compared to a bool [ bool fact ]
     BoolFact* f;
     HASH_FIND_STR(db->boolFacts, factname, f);
     if (!f)
@@ -23,7 +23,7 @@ bool isComparisonCorrect(FactDB* db, const char* factname){
 }
 // checks if the fact exists in the database already
 bool factExists(FactDB* db, const char* fact, factType t){
-    switch (t){
+    switch (t){ // hence it only has to search through one type
         case BOOL:{
             BoolFact* f;
             HASH_FIND_STR(db->boolFacts, fact, f);
@@ -61,8 +61,10 @@ bool isMixedBoolNumArray(FactDB* db, yyjson_val* arr){
         if (!yyjson_is_str(elem))
             continue;
         const char* name = yyjson_get_str(elem);
-        if (factExists(db, name, BOOL)) hasBool = true;
-        if (factExists(db, name, NUM))  hasNum  = true;
+        if (factExists(db, name, BOOL)) 
+            hasBool = true;
+        if (factExists(db, name, NUM))  
+            hasNum  = true;
         if (hasBool && hasNum)
             return true;
     }
