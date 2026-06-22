@@ -2,37 +2,30 @@
 
 #include "common.h"
 #include <math.h>
-#include "uthash.h"
+
 #include "arena.h"
 #include "factdb.h"
 #include "bytecode.h"
+#include "ConditionTree.h"
 
 #define MAX_ACTION_NAME 64
 #define MAX_RULE_NAME 64
 #define MAX_RULES 1000
-#define RULE_ENGINE_ARENA_SIZE 1024 * 1024 // 1MB
+#define RULE_ENGINE_ARENA_SIZE (1024 * 1024) // 1MB
 
 typedef void (*Action_f)(FactDB* db, void* ctx);
 
-
-typedef struct {
-    Node* condition;
-    Bytecode* bc;
-    char *action;
-    char ruleName[MAX_RULE_NAME];
-    Action_f func;
-    void* ctx;
-
-    UT_hash_handle hh; // makes this structure hashable [implemented using uthash]
-}Rule;
-
-typedef struct{
-    Rule *rules; // a hash table of rules, where the key is the rule name and the value is the Rule struct
-    Arena* arena;
-} RuleEngine;
+/* Opaque handles. Internals are hidden in rule_internal.h. */
+typedef struct Rule Rule;
+typedef struct RuleEngine RuleEngine;
 
 void runRuleEngine(RuleEngine*, FactDB*);
 Rule* createRule(RuleEngine*, Node*, char*, char*, void*);
-RuleEngine* createRuleEngine();
+RuleEngine* createRuleEngine(void);
 void addRule(RuleEngine*, Rule*);
 void deleteRuleEngine(RuleEngine*);
+Rule* findRule(RuleEngine*, const char* name);
+
+/* Lets a caller bind/rebind the action function+ctx for every rule whose
+ * action name matches, without exposing the Rule struct's fields directly. */
+void rule_engine_bind_action(RuleEngine* e, const char* action_name, Action_f f, void* ctx);

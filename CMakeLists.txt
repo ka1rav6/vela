@@ -18,9 +18,12 @@ add_executable(engine
     include/ConditionTree.h
     include/factdb.h
     include/engine.h
+    include/engine_internal.h
     include/rule.h
+    include/rule_internal.h
     include/semanticChecker.h
     include/ActionEntry.h
+    include/ActionEntry_internal.h
     include/jsonParser.h
     include/arena.h
     include/arena_internal.h

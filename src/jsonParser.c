@@ -1,4 +1,4 @@
-#include "../include/rule.h"
+#include "../include/rule_internal.h"
 #include "../include/jsonParser.h"
 #include "../include/semanticChecker.h"
 #include "../include/bytecode.h"
@@ -55,8 +55,8 @@ RuleEngine* build_ast(yyjson_doc* doc, FactDB* db, ActionEntry* g_registry){
         
         ActionEntry* ae = lookupAction(g_registry, r->action);
         if (ae) {
-            r->func = ae->func;
-            r->ctx  = ae->ctx;
+            r->func = action_entry_func(ae);
+            r->ctx  = action_entry_ctx(ae);
         }
         r->condition = build_node(engine->arena, db, cond);
         r->bc = compileNode(engine->arena, r->condition);
