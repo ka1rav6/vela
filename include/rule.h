@@ -2,7 +2,7 @@
 
 #include "common.h"
 #include <math.h>
-
+#include "uthash.h"
 #include "arena.h"
 #include "factdb.h"
 #include "bytecode.h"

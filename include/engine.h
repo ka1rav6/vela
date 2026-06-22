@@ -5,12 +5,8 @@
 #include "ActionEntry.h"
 #include "arena.h"
 
-typedef struct Engine{
-    FactDB* db;
-    RuleEngine *r_engine;
-    const char* json_file;
-    ActionEntry* action_registry;
-} Engine;
+/* Opaque handle. Internals are hidden in engine_internal.h. */
+typedef struct Engine Engine;
 
 Engine* createEngine(const char*);
 void deleteEngine(Engine*);
