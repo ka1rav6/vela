@@ -83,6 +83,7 @@ Bytecode* compileNode(Arena* ar, Node* n)
     Instr i;
     i.op = OP_HALT;
     emit(ar, bc, i);
+    printByteCode(bc);
     return bc;
 }
 
@@ -146,4 +147,48 @@ bool runBytecode(FactDB* db, Bytecode* bc)
         }
     }
     return false;
+}
+
+const char* cmpOpStr[] = {
+                            "OP_LT",
+                            "OP_LE",
+                            "OP_GT",
+                            "OP_GE",
+                            "OP_EQ",
+                            "OP_NE"
+                         };
+
+const char* opcode_str[] = {
+                            "OP_PUSH_FACT",
+                            "OP_PUSH_CMP",
+                            "OP_AND",
+                            "OP_OR",
+                            "OP_NOT",
+                            "OP_HALT"
+                           };
+
+
+void printByteCode(Bytecode* bc){
+    FILE* fp = NULL;
+    fp = fopen("re.vela.cache", "w");
+
+    for (size_t i = 0; i < bc->count; i++){
+        const char* OpC = opcode_str[bc->code[i].op];
+        fprintf(fp, "%s\n", OpC);
+        if (bc->code[i].op == OP_PUSH_CMP){
+            const char* cmpOp = cmpOpStr[bc->code[i].cmp];
+            fprintf(fp, "%s\n", cmpOp);
+            fprintf(fp, "%lf\n", bc->code[i].val);
+            fprintf(fp, "Factname : %s\n", bc->code[i].factName);
+            fprintf(fp, "\n\n");
+        }
+        else if (bc->code[i].op == OP_PUSH_FACT){
+            fprintf(fp, "Factname : %s\n", bc->code[i].factName);
+            fprintf(fp, "\n\n");
+        }
+        else {
+            fprintf(fp, "\n\n");
+        }
+    }
+    fclose(fp);
 }

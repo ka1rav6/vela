@@ -1,4 +1,4 @@
-#include "../include/rule_internal.h"
+#include "../include/rule_internal.h" 
 #include "../include/arena.h"
 #include "../include/bytecode.h"
 
@@ -25,7 +25,7 @@ void runRuleEngine(RuleEngine* e, FactDB* db)
             }
         }
     }
-    pthread_mutex_unlock(&e->lock);
+    pthread_mutex_unlock(&e->lock); 
 }
 
 // simple rule constructor
