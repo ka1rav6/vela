@@ -35,6 +35,11 @@ add_executable(engine
     include/common.h
     include/common.h.gch
     include/bytecode.h
+
+    ## C++
+    include/lexer.h
+    src/lexer.cpp
+
 )
 
 # Debug + gprof profiling
