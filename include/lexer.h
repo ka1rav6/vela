@@ -13,14 +13,12 @@ NOTE THE ASSUMPTIONS:
 2. Rest all names etc created by the user must be unique
 3. The user should be able to update particular data points and it will not change on the file (as that is more expensive)
    and rather be changed in the tree straight away
-4. All user defined names will be converted to lower case and hence they would have to be unique in a case sensitive way:
-   this is to simplify usage of this API
-5. Each rule/ fact or condition is written on a separate line with a simple identifier (of keywords)
-6. each rule can be named something specific using this format:
+4. Each rule/ fact or condition is written on a separate line with a simple identifier (of keywords)
+5. each rule can be named something specific using this format:
                  RULE $RULE_NAME ruleconditions 
                  (note the dollar sign)
-7. Single line comments can be created by using a '#' (HASHTAG)
-8. normal parenthesis can be used to nest conditions
+6. Single line comments can be created by using a '#' (HASHTAG)
+7. normal parenthesis can be used to nest conditions
 */
 
 /*
@@ -45,7 +43,7 @@ OP          -> < | > | <= | >= | == | !=
  *
  * */
 
-
+namespace VelaLang{
 enum class TokenType{
     TOK_RULE,
     TOK_FACT,
@@ -82,8 +80,8 @@ private:
 public:
     Line()  = default;
     ~Line() = default;
-    Line(const Line&) = delete;
-    Line(Line&&) = delete;
+    Line(const Line&) = default;
+    Line(Line&&) = default;
     Line& operator<<(const Token& t){
         tokens.emplace_back(t);
         return *this;
@@ -116,3 +114,4 @@ class TokenStream{
         }
 };
 TokenStream* processFile(const std::string filename, Arena* ar);
+} // namespace VelaLang

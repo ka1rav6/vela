@@ -2,10 +2,19 @@
 
 #include <fstream>
 
-
+namespace VelaLang{
 Token::Token(TokenType type, const std::string s){
     this->type = type;
     this->text = s;
+}
+
+Token::Token(TokenType type, double num){
+    this->type = type;
+    this->number = num;
+}
+
+static bool isnum(char c){
+    return std::isdigit(static_cast<unsigned char>(c));
 }
 
 
@@ -42,19 +51,62 @@ static Line* processLine(const std::string& line, Arena* ar, size_t line_num){
                 ++i;
             }
             break;
-        // OTHER MULTICHARACTER TOKENS
-        case '$':
-            std::string ident = "";
-            while (i < line.size() && line.at(++i) != ' '){
-                char ch = line.at(i);
-                if   (isalnum(ch)) ident += ch;
+        case '$':{
+            *l << Token(TokenType::TOK_DOLLAR, "$");
+            std::string ident;
+            ++i;
+            while (i < line.size() && line[i] != ' '){
+                char c = line[i];
+                if (std::isalnum(static_cast<unsigned char>(c)) || c == '_') ident += c;
                 else {
                     std::string error_msg = "The identifier can only contain characters from \"A-Z, a-z, 0-9, _\"\n";
                     error_msg += "The line " + std::to_string(line_num) + " contains an invalid identifier\n";
-                    throw new std::runtime_error(error_msg);
+                    throw std::runtime_error(error_msg);
                 }
+                ++i;
             }
+            --i;
             *l << Token(TokenType::TOK_IDENT, ident);
+            break;
+        }
+        case '(':
+            *l << Token(TokenType::TOK_LPAREN, "(");
+            break;
+        case ')':
+            *l << Token(TokenType::TOK_RPAREN, ")");
+            break;
+        default:
+            if (isnum(ch)){
+                std::string num;
+                num += ch;
+                ++i;
+                while (i < line.size() && line[i] != ' '){
+                    if (!isnum(line[i]) && line[i] != '.'){
+                        throw std::runtime_error("Number contains letter inside: line : " + std::to_string(line_num));
+                    }
+                    num += line[i];
+                    ++i;
+                }
+                --i;
+                *l << Token(TokenType::TOK_NUMBER, std::stod(num));
+            } else if (std::isalpha(static_cast<unsigned char>(ch)) || ch == '_') {
+                std::string word;
+                word += ch;
+                ++i;
+                while (i < line.size() && (std::isalnum(static_cast<unsigned char>(line[i])) || line[i] == '_')) {
+                    word += line[i];
+                    ++i;
+                }
+                --i;
+                if (word == "RULE") *l << Token(TokenType::TOK_RULE, word);
+                else if (word == "FACT") *l << Token(TokenType::TOK_FACT, word);
+                else if (word == "COND") *l << Token(TokenType::TOK_COND, word);
+                else if (word == "AND") *l << Token(TokenType::TOK_AND, word);
+                else if (word == "OR") *l << Token(TokenType::TOK_OR, word);
+                else if (word == "NOT") *l << Token(TokenType::TOK_NOT, word);
+                else *l << Token(TokenType::TOK_IDENT, word);
+            }
+            break;
     }
 }
     return l;
@@ -72,3 +124,4 @@ TokenStream* processFile(const std::string filename, Arena* ar){
     }
     return ts;
 }
+} // namespace VelaLang
