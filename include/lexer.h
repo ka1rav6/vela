@@ -5,7 +5,7 @@
 #include <iostream>
 #include <fstream>
 #include <vector>
-
+#include "arena.h"
 /*
 NOTE THE ASSUMPTIONS:
 1. Language has only keywords : RULE, FACT, COND, AND, OR, NOT (ALWAYS ALL CAPS)
@@ -71,5 +71,23 @@ public:
     Token(TokenType, std::string, double);
 };
 
-Node* processLine(const char* line);
-std::vector<Token> processFile(const std::string filename);
+class TokenStream{
+private:
+    std::vector<Token> tokens;
+public:
+    TokenStream()  = default;
+    ~TokenStream() = default;
+    TokenStream(const TokenStream&) = delete;
+    TokenStream(TokenStream&&) = delete;
+    TokenStream& operator<<(const Token& t){
+        tokens.emplace_back(t);
+        return *this;
+    }
+    size_t getLine(){
+        return tokens.size();
+    }
+    std::vector<Token> getTokens(){
+        return tokens;
+    }
+};
+TokenStream* processFile(const std::string filename, Arena* ar);
