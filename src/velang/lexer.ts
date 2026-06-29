@@ -21,8 +21,18 @@ program     -> statement*
 statement   -> rule | fact | cond
 
 rule        -> "RULE" "$" IDENT expression
-fact        ->"FACT" "$" IDENT
+fact        ->"FACT" "$" IDENT val
 cond        ->"COND" expression
+
+example:
+FACT $isadmin true
+FACT $age     18
+COND isAdmin AND (age > 18)
+RULE $canAccess isAdmin
+RULE $cantAccess age < 18
+
+
+
 
 expression  -> term ( (AND | OR) term )*
 term        -> NOT term | primary
