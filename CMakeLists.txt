@@ -36,11 +36,6 @@ add_executable(engine
     include/arena_internal.h
     include/common.h
     include/bytecode.h
-
-    ## C++
-    include/lexer.h
-    src/velang/lexer.cpp
-
 )
 
 target_include_directories(engine PRIVATE ${CMAKE_SOURCE_DIR}/include)
