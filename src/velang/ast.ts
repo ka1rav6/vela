@@ -1,4 +1,4 @@
-import { TokenType as t_type} from "./dist/lexer.js"
+import { TokenType as t_type} from "./lexer.js"
 
 export interface Expr{
 
