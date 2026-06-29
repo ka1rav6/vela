@@ -1,6 +1,6 @@
-#include "rule_internal.h" 
-#include "arena.h"
-#include "bytecode.h"
+#include "../../include/rule_internal.h" 
+#include "../../include/arena.h"
+#include "../../include/bytecode.h"
 
 
 // ----------- ACTUAL FUNCTIONS -------------//
@@ -17,7 +17,7 @@ void runRuleEngine(RuleEngine* e, FactDB* db)
         if (runBytecode(db, cr->bc)){ // returns true only if OP_HALT instruction is present at the end.
             if (cr->func){ // if the current rule has a function assigned to it
                 cr->func(db, cr->ctx);
-                printf("Action Triggered: %s\n", cr->action);
+                printf("Action Triggered: %s\n", cr->action); // Will be removed in production
             }
             else{
                 printf("As no function is linked, no action was triggered"
@@ -31,12 +31,12 @@ void runRuleEngine(RuleEngine* e, FactDB* db)
 // simple rule constructor
 Rule* createRule(RuleEngine* e, Node* n, char* action, char* name, void* ctx)
 {
-    Rule* temp = (Rule*)arena_alloc(e->arena, sizeof(Rule));
+    Rule* temp      = (Rule*)arena_alloc(e->arena, sizeof(Rule));
     temp->condition = n;
-    temp->bc = compileNode(e->arena, n);
-    temp->action = arena_strdup(e->arena, action); // Safely allocate action string in the arena
+    temp->bc        = compileNode(e->arena, n);
+    temp->action    = arena_strdup(e->arena, action); // Safely allocate action string in the arena
     strcpy(temp->ruleName, name);
-    temp->ctx = ctx;
+    temp->ctx       = ctx;
     return temp;
 }
 
@@ -77,7 +77,6 @@ void deleteRuleEngine(RuleEngine* RE)
 }
 
 // ------------ FUNCTIONS FOR ADDING/ FINDING stuff in the hash tables --------------
-
 
 // adds the rule to the rule engine
 void addRule(RuleEngine* e, Rule* r)
