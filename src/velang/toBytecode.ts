@@ -94,7 +94,8 @@ export default function toBytecode(fileName: string, program: Program): void {
         chunks.push(encodeHalt());
         instrCount++;
     }
-    const header = createHeader(0x524C4542, 2, instrCount);
-    writeFileSync(fileName, Buffer.concat([header, ...chunks]));
+    const header     = createHeader(0x524C4542, 2, instrCount);
+    const final_file = fileName + ".velabc";
+    writeFileSync(final_file, Buffer.concat([header, ...chunks]));
 }
 
