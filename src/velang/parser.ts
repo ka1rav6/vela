@@ -82,7 +82,7 @@ export class Parser {
         this.advance();
         this.expect(TokenType.TOK_DOLLAR, "Expected '$' after RULE");
         const nameTok = this.expect(TokenType.TOK_IDENT, "Expected rule name after '$'");
-        const expr = this.parseExpression();
+        const expr    = this.parseExpression();
         return { kind: "rule", name: nameTok.text, expr };
     }
 
