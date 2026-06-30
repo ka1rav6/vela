@@ -36,3 +36,17 @@ OP_PUSH_CMP
 Offset      Bytes       Field
 12          01          OP_PUSH_CMP (enum val = 0)
 
+
+
+## Final Bytes and what they represent:
+
+- Header: 
+    1. Magic Number
+    2. Version Number
+    3. Instruction count
+
+- Body:
+    1. Opcode
+    2. Operation
+    3. Name
+    4. Value (number)

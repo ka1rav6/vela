@@ -20,45 +20,50 @@ const CMP_GE = 3;
 const CMP_EQ = 4;
 const CMP_NE = 5;
 
+// a simple map that maps the operator symbol to their respective enum number
 const cmpMap: Record<string, number> = {
     "<" : CMP_LT, "<=" : CMP_LE,
     ">" : CMP_GT, ">=" : CMP_GE,
     "==": CMP_EQ, "!=" : CMP_NE,
 };
 
+// encodes a string to binary and returns the binary buffer that has been created
 function encodeInstr(op: number, cmp: number, factName: string, val: number): Buffer {
     const nameBuf = Buffer.from(factName, "utf8");
-    const total = 1 + 1 + nameBuf.length + 1 + 8;
-    const buf = Buffer.alloc(total);
-    let off   = 0;
-    buf.writeUInt8(op, off++);
+    const total   = 1 + 1 + nameBuf.length + 1 + 8;    // op + cmp + name + "\0" + double
+    const buf     = Buffer.alloc(total);               // creates a buffer full of zeros
+    let off       = 0;                                 // the main offset (ptr to the byte in the buffer)
+    buf.writeUInt8(op,  off++);
     buf.writeUInt8(cmp, off++);
-    nameBuf.copy(buf, off);
+    nameBuf.copy(buf, off);                            // copying the factname to the buffer
     off += nameBuf.length;
-    buf.writeUInt8(0, off++);
-    buf.writeDoubleLE(val, off);
+    buf.writeUInt8(0, off++);                          // adding the null terminator
+    buf.writeDoubleLE(val, off);                       // LE = Little Endian
     return buf;
 }
 
 function encodeHalt(): Buffer {
-    return Buffer.from([OP_HALT]);
+    return Buffer.from([OP_HALT]);    // a buffer that simply just contains the encoding of OP_HALT
 }
 
+// the main recursive function that returns a Buffer[] containing 
+// the required binary bytecode
 function compileExpr(expr: Expr): Buffer[] {
     switch (expr.kind) {
-        case "ident": {
+        case "ident": { // ident = some-name [identifier]
             const e = expr as IdentExpr;
-            return [encodeInstr(OP_PUSH_FACT, 0, e.name, 0)];
+            return [encodeInstr(OP_PUSH_FACT, 0, e.name, 0)];                   // 0 and 0 just act as padding here
         }
         case "comparison": {
-            const e   = expr as ComparisonExpr;
+            const e   = expr as ComparisonExpr
             const cmp = cmpMap[e.operator];
-            if (cmp === undefined) throw new Error(`Unknown comparison operator: ${e.operator}`);
+            if (cmp === undefined)                                              // some unknown symbol
+                throw new Error(`Unknown comparison operator: ${e.operator}`);
             return [encodeInstr(OP_PUSH_CMP, cmp, e.left, e.right)];
         }
         case "binary": {
             const e      = expr as BinaryExpr;
-            const left   = compileExpr(e.left);
+            const left   = compileExpr(e.left);                                 // again similar recursive walking to write and produce the bytecode
             const right  = compileExpr(e.right);
             const opCode = e.operator === "AND" ? OP_AND : OP_OR;
             return [...left, ...right, Buffer.from([opCode])];
@@ -73,17 +78,18 @@ function compileExpr(expr: Expr): Buffer[] {
     }
 }
 
+// to reate the header of each binary file
 function createHeader(magic: number, version: number, instrNum: number): Buffer {
     const buf = Buffer.alloc(12);
-    buf.writeUInt32LE(magic,    0);
-    buf.writeUInt32LE(version,  4);
+    buf.writeUInt32LE(magic,    0);  // shows that this is a vela binary
+    buf.writeUInt32LE(version,  4);  // a version number to check compatibility
     buf.writeUInt32LE(instrNum, 8);
     return buf;
 }
 
 export default function toBytecode(fileName: string, program: Program): void {
     const chunks: Buffer[] = [];
-    let instrCount = 0;
+    let instrCount = 0; // calculated through the loop and ultimately written out to the header of the binary
 
     for (const stmt of program.statements) {
         if (stmt.kind !== "rule") continue;
