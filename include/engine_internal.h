@@ -7,7 +7,7 @@
 struct Engine {
     FactDB* db;
     RuleEngine *r_engine;
-    const char* json_file;
+    const char* file;
     ActionEntry* action_registry;
     pthread_mutex_t lock; /* protects action_registry against concurrent registerTheAction calls */
 };

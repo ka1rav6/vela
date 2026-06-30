@@ -1,7 +1,7 @@
 #include "../../include/engine_internal.h"
 
 // Engine constructor. To be called by the user.
-Engine* createEngine(const char* json_file){
+Engine* createEngine(const char* file, FileType type){
     Engine* temp = (Engine*)malloc(sizeof(Engine));
 
     if (!temp){
@@ -9,12 +9,14 @@ Engine* createEngine(const char* json_file){
     }
     memset(temp, 0, sizeof(Engine));
 
-    if (json_file == NULL){
+    if (file == NULL){
         FATAL("ERROR: the engine cannot be created with a NULL json file\n");
     }
-    temp->json_file = json_file;
+    temp->file      = file;
     temp->db        = createFactDB();
-    temp->r_engine  = build_ast(parseJSON(json_file), temp->db, temp->action_registry);
+    if (type == JSON)
+        temp->r_engine  = build_ast(parseJSON(file), temp->db, temp->action_registry);
+    else loadBytecode(file); // TODO: To create
     if (pthread_mutex_init(&temp->lock, NULL) != 0) {
         FATAL("Could not initialize Engine mutex\n");
     }

@@ -15,7 +15,7 @@ void runRuleEngine(RuleEngine* e, FactDB* db)
     HASH_ITER(hh, e->rules, cr, tmp){
         // runBytecode does the whole eval process
         if (runBytecode(db, cr->bc)){ // returns true only if OP_HALT instruction is present at the end.
-            if (cr->func){ // if the current rule has a function assigned to it
+            if (cr->func){            // if the current rule has a function assigned to it
                 cr->func(db, cr->ctx);
                 printf("Action Triggered: %s\n", cr->action); // Will be removed in production
             }

@@ -6,6 +6,12 @@
 #include "ActionEntry.h"
 #include "arena.h"
 
+typedef enum {
+    VELA,
+    JSON,
+}FileType;
+
+
 yyjson_doc* parseJSON(const char*); 
 
 RuleEngine* build_ast(yyjson_doc*, FactDB*, ActionEntry*);

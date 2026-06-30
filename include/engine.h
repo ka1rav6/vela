@@ -8,7 +8,7 @@
 /* Opaque handle. Internals are hidden in engine_internal.h. */
 typedef struct Engine Engine;
 
-Engine* createEngine(const char*);
+Engine* createEngine(const char*, FileType);
 void deleteEngine(Engine*);
 void registerTheAction(Engine*, const char* name, Action_f, void*);
 void runEngine(Engine*);
