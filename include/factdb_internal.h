@@ -6,15 +6,15 @@
 #include <pthread.h>
 
 typedef struct {
-    char name[MAX_NAME];
-    double val;
     UT_hash_handle hh;
+    double val;
+    char name[MAX_NAME];
 } NumFact;
 
 typedef struct {
+    UT_hash_handle hh;
     char name[MAX_NAME];
     bool val;
-    UT_hash_handle hh;
 } BoolFact;
 
 struct FactDB {

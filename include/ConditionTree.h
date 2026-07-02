@@ -18,13 +18,13 @@ typedef enum {
 } CompareOp;
 
 typedef struct Node {
-    Type type;
     union {
         struct { struct Node* left; struct Node* right; } op;
         struct { struct Node* child; } unary;
         struct { char *factName; } Fact;
-        struct { char *factName; CompareOp op; double val; } Compare;
+        struct { char *factName; double val; CompareOp op; } Compare;
     } data;
+    Type type;
 } Node;
 
 void deleteNode(Node*);
