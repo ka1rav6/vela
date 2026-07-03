@@ -23,7 +23,7 @@ struct FactDB {
     NumFact*  numFacts;
 };
 
-// Internal-only accessors needed by semanticChecker.c / jsonParser.c, which
+// Internal-only accessors needed by semanticChecker.c / parser_engine.c, which
 // need to inspect raw hash membership rather than just fact values.
 bool factdb_has_bool(FactDB* db, const char* name);
 bool factdb_has_num(FactDB* db, const char* name);

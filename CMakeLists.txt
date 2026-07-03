@@ -12,8 +12,8 @@ add_executable(engine
     src/engine/factdb.c
     src/engine/rule.c
     src/engine/ConditionTree.c
-    test/testFuncs.c
-    src/engine/jsonParser.c
+    test/testRunner.c
+    src/engine/parser_engine.c
     src/engine/semanticChecker.c
     src/engine/engine.c
     src/engine/ActionEntry.c
@@ -32,7 +32,7 @@ add_executable(engine
     include/semanticChecker.h
     include/ActionEntry.h
     include/ActionEntry_internal.h
-    include/jsonParser.h
+    include/parser_engine.h
     include/arena.h
     include/arena_internal.h
     include/common.h

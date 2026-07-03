@@ -32,7 +32,7 @@ You describe facts and rules in a JSON file:
 }
 ```
 
-`jsonParser.c` reads this with [yyjson](https://github.com/ibireme/yyjson) and walks it recursively, turning each condition into a tree of `Node`s (`ConditionTree.h`). `AND`/`OR`/`NOT` become internal nodes, fact references and comparisons become leaves. A `semanticChecker` pass runs alongside this to catch malformed rules early — undefined facts, type mismatches (comparing a bool fact like it's numeric), empty `and`/`or` arrays, duplicate rule names — and fails fast with `FATAL` rather than building a broken engine.
+`parser_engine.c` reads this with [yyjson](https://github.com/ibireme/yyjson) and walks it recursively, turning each condition into a tree of `Node`s (`ConditionTree.h`). `AND`/`OR`/`NOT` become internal nodes, fact references and comparisons become leaves. A `semanticChecker` pass runs alongside this to catch malformed rules early — undefined facts, type mismatches (comparing a bool fact like it's numeric), empty `and`/`or` arrays, duplicate rule names — and fails fast with `FATAL` rather than building a broken engine.
 
 ### 2. AST → bytecode
 
@@ -67,7 +67,7 @@ Instead of hardcoding what each action name does, Vela uses an action registry (
 test.json
     │
     ▼
-jsonParser.c ──► semanticChecker.c (validates facts/rules as it parses)
+parser_engine.c ──► semanticChecker.c (validates facts/rules as it parses)
     │
     ▼
 ConditionTree (AST, arena-allocated)
@@ -94,7 +94,7 @@ runEngine() ──► runs bytecode VM per rule against FactDB ──► fires r
 | `ConditionTree.c/h` | `Node` definition and constructor for the condition AST |
 | `factdb.c/h` | Fact storage: bitmask for bools, hash table for numerics; recursive `evaluate()` kept for reference/fallback |
 | `bytecode.c/h` | Compiles a `Node` tree into a flat instruction array; stack-machine VM (`runBytecode`) executes it |
-| `jsonParser.c/h` | Parses the JSON file with yyjson, builds facts and the rule AST |
+| `parser_engine.c/h` | Parses the JSON file with yyjson, builds facts and the rule AST |
 | `semanticChecker.c/h` | Validation: operator legality, fact existence, type consistency, duplicate rule names |
 | `rule.c/h` | `Rule` and `RuleEngine` definitions, rule storage/lookup, the run loop |
 | `ActionEntry.c/h` | Action name → function pointer registry |
@@ -166,7 +166,7 @@ Linux/ MacOS:
 Please make sure you have `yyjson` installed or else install it from here: https://github.com/ibireme/yyjson
 
 
-Run the `engine` executable file created in the build directory. For sample usage please checkout `testFuncs.c` and `test.json`
+Run the `engine` executable file created in the build directory. For sample usage please checkout `testRunner.c` and `test.json`
 
 ## License
 
