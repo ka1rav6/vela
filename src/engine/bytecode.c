@@ -180,7 +180,7 @@ void printByteCode(Bytecode* bc){
     FILE* fp = NULL;
     fp = fopen("re.vela.cache", "w");
 
-    for (size_t i = 0; i < bc->count; i++){
+    for (int i = 0; i < bc->count; i++){
 
         const char* OpC = opcode_str[bc->code[i].op];
         fprintf(fp, "%s\n", OpC);                                 // first printing out the opcode
