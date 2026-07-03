@@ -1,4 +1,4 @@
-#include "../../include/factdb_internal.h"
+#include "factdb_internal.h"
 
 // gets the value of a numeric fact from the fact DB by searching for its name.
 // Thread-safe: read-locked, since multiple readers can look up facts concurrently.
@@ -22,49 +22,6 @@ bool getBoolFact(FactDB* db, const char* name)
     bool result = f ? f->val : false;
     pthread_rwlock_unlock(&db->lock);
     return result;
-}
-
-// evaluates a node in the AST by recursively evaluating its children and applying the appropriate logic
-// now not used ever since bytecode has started being used. This was the initial evaluating function
-bool evaluate(FactDB* db, Node* n)
-{
-
-    switch(n->type)
-    {
-        case NODE_AND:
-            return evaluate(db, n->data.op.left) && evaluate(db, n->data.op.right);
-        case NODE_OR:
-            return evaluate(db, n->data.op.left) || evaluate(db, n->data.op.right);
-        case NODE_NOT:
-            return !evaluate(db, n->data.unary.child);
-        case NODE_FACT:
-            return getBoolFact(db, n->data.Fact.factName);
-        case NODE_COMPARE:{
-            double lhs = getNumFact(db, n->data.Compare.factName);
-            double rhs = n->data.Compare.val;
-
-            // compare the operator and return whether the comparison is correct
-            switch(n->data.Compare.op)
-            {
-                case OP_LT:
-                    return lhs <  rhs;
-                case OP_GT:
-                    return lhs >  rhs;
-                case OP_LE:
-                    return lhs <= rhs;
-                case OP_GE:
-                    return lhs >= rhs;
-                case OP_EQ:
-                    return lhs == rhs;
-                case OP_NE:
-                    return lhs != rhs;
-                default:
-                    fprintf(stderr, "UNKNOWN COMPARE OP\n");
-                    return false;
-            }
-        }
-    }
-    return false;
 }
 
 // constructor for factDB
@@ -103,10 +60,6 @@ void deleteFactDB(FactDB* db)
         HASH_DEL(db->boolFacts,  currBool);
         free(currBool);
     }
-    currBool = NULL;
-    tempBool = NULL;
-    currNum  = NULL;
-    tempNum  = NULL;
     pthread_rwlock_destroy(&db->lock);
     free(db);
 }
@@ -133,7 +86,8 @@ void setBoolFact(FactDB* db, const char* name, bool val)
     }
     f = (BoolFact*) malloc(sizeof(BoolFact));
     memset(f, 0, sizeof(BoolFact));
-    strcpy(f->name, name);
+    strncpy(f->name, name, MAX_NAME - 1);
+    f->name[MAX_NAME - 1] = '\0';
     f->val = val;
     HASH_ADD_STR(db->boolFacts, name, f);
     pthread_rwlock_unlock(&db->lock);
@@ -159,7 +113,8 @@ void setNumFact(FactDB* db, const char* name, double val)
     }
     f = (NumFact*)malloc(sizeof(NumFact));
     memset(f, 0, sizeof(NumFact));
-    strcpy(f->name, name);
+    strncpy(f->name, name, MAX_NAME - 1);
+    f->name[MAX_NAME - 1] = '\0';
     f->val = val;
     HASH_ADD_STR(db->numFacts, name, f);
     pthread_rwlock_unlock(&db->lock);

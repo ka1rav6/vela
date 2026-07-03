@@ -1,4 +1,4 @@
-#include "../../include/ActionEntry_internal.h"
+#include "ActionEntry_internal.h"
 
 // registers the action in the registry
 int registerAction(ActionEntry** registry, const char* action, Action_f func, void* ctx)
@@ -15,7 +15,8 @@ int registerAction(ActionEntry** registry, const char* action, Action_f func, vo
         return -1; // the error code
     }
     memset(e, 0, sizeof(ActionEntry));
-    strcpy(e->action, action);
+    strncpy(e->action, action, MAX_ACTION_NAME - 1);
+    e->action[MAX_ACTION_NAME - 1] = '\0';
     e->func = func;
     e->ctx  = ctx;
     HASH_ADD_STR(*registry, action, e); // uthash macro to add the action to the registry hashmap

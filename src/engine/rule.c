@@ -1,6 +1,6 @@
-#include "../../include/rule_internal.h" 
-#include "../../include/arena.h"
-#include "../../include/bytecode.h"
+#include "rule_internal.h"
+#include "arena.h"
+#include "bytecode.h"
 
 
 // ----------- ACTUAL FUNCTIONS -------------//
@@ -37,18 +37,14 @@ Rule* createRule(RuleEngine* e, Node* n, const char* action, const char* name, v
     Rule* temp      = (Rule*)arena_alloc(e->arena, sizeof(Rule));
     temp->condition = n;
     temp->bc        = compileNode(e->arena, n);
-    temp->action    = arena_strdup(e->arena, action); // Safely allocate action string in the arena
-    strcpy(temp->ruleName, name);
+    temp->action    = arena_strdup(e->arena, action);
+    strncpy(temp->ruleName, name, MAX_RULE_NAME - 1);
+    temp->ruleName[MAX_RULE_NAME - 1] = '\0';
     temp->ctx       = ctx;
     return temp;
 }
 
-// USED to be a rule destructor
-void deleteRule(Rule* r)
-{
-    (void)r;
-    // Intentionally empty. Managed via RuleEngine teardown (destroy arena function).
-}
+
 
 // simple rule engine constructor
 RuleEngine* createRuleEngine()
