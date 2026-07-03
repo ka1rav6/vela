@@ -8,7 +8,8 @@ static inline size_t align_up(size_t n, size_t alignment) {
 // asks the system for memory of size "size"
 char* ask_memory(size_t size) {
     void* ptr = mmap(NULL, size, PROT_READ | PROT_WRITE,
-                      MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
+                      MAP_PRIVATE | MAP_ANONYMOUS, -1, 0); // asking memory from the system
+                                                           
     if (ptr == MAP_FAILED) {
         fprintf(stderr, "Arena memory mapping failed\n");
         return NULL;
@@ -18,6 +19,7 @@ char* ask_memory(size_t size) {
 
 // constructor for the arena of size "size"
 Arena* createArena(size_t size) {
+    assert(size == 0); // no point of allocating an arena of size 0
     Arena* ar = (Arena*)malloc(sizeof(Arena));
     if (!ar) {
         fprintf(stderr, "Could not allocate Arena struct\n");
@@ -32,8 +34,9 @@ Arena* createArena(size_t size) {
     ar->size  = size;
     if (pthread_mutex_init(&ar->lock, NULL) != 0) {
         fprintf(stderr, "Could not initialize arena mutex\n");
-        munmap(ar->start, ar->size);
+        munmap(ar->start, ar->size); // returning the memory back to system
         free(ar);
+        ar = NULL;
         return NULL;
     }
     return ar;
@@ -44,7 +47,7 @@ Arena* createArena(size_t size) {
 // since multiple threads may try to allocate from the same arena concurrently.
 void* arena_alloc(Arena* ar, size_t size) {
     if (!ar || size == 0) return NULL;
-    pthread_mutex_lock(&ar->lock);
+    pthread_mutex_lock(&ar->lock); // lock starts now :
 
     size_t aligned = align_up(ar->used, ARENA_ALIGNMENT);
     if (size > ar->size - aligned) {
@@ -65,7 +68,8 @@ char* arena_strdup(Arena* ar, const char* s) {
     size_t len = strlen(s) + 1;
     // arena_alloc already takes the lock; no extra locking needed here.
     char* copy = (char*)arena_alloc(ar, len);
-    if (copy) memcpy(copy, s, len);
+    assert (copy != NULL);
+    memcpy(copy, s, len);
     return copy;
 }
 
@@ -73,15 +77,16 @@ char* arena_strdup(Arena* ar, const char* s) {
 void arena_reset(Arena* ar) {
     if (!ar) return;
     pthread_mutex_lock(&ar->lock);
-    ar->used = 0;
+    ar->used = 0; // resetting the pointer to be at the start of the arena
     pthread_mutex_unlock(&ar->lock);
 }
 
 // destroys the arena and frees all the memory
 void destroyArena(Arena* ar) {
     if (!ar) return;
-    if (munmap(ar->start, ar->size) == -1)
+    if (munmap(ar->start, ar->size) == -1) // returning the memory back and seeing if it has been returned successfully
         fprintf(stderr, "munmap failed\n");
     pthread_mutex_destroy(&ar->lock);
     free(ar);
+    ar = NULL;
 }
