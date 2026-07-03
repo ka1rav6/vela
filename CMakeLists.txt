@@ -19,6 +19,7 @@ add_executable(engine
     src/engine/ActionEntry.c
     src/engine/arena.c
     src/engine/bytecode.c
+    src/engine/readBin.c
     # .h files
     include/uthash.h
     include/ConditionTree.h
