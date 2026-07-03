@@ -24,7 +24,7 @@ add_executable(engine
 target_include_directories(engine PRIVATE ${CMAKE_SOURCE_DIR}/include)
 
 target_compile_options(engine PRIVATE
-    -g -O0 -Wall -Wextra -pedantic
+    -g -O0 -Wall -Wextra -pedantic -std=c11 -D_POSIX_C_SOURCE=200809L
 )
 
 target_link_libraries(engine PRIVATE
