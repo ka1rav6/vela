@@ -12,7 +12,7 @@ add_executable(engine
     src/engine/factdb.c
     src/engine/rule.c
     src/engine/ConditionTree.c
-    src/engine/testFuncs.c
+    test/testFuncs.c
     src/engine/jsonParser.c
     src/engine/semanticChecker.c
     src/engine/engine.c
