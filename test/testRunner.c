@@ -105,11 +105,7 @@ void cb_should_not_fire(FactDB* d, void* c){
 
 int main(void){
 
-    /* Register callbacks BEFORE creating the engine.
-       The engine wires them automatically during build_ast. */
-       
-       /* Engine creation — callbacks are wired automatically */
-       Engine* e = createEngine("../test/test.json", JSON);
+    Engine* e = createEngine("../test/test1.json", JSON);
     if (!e) {
         fprintf(stderr, "Failed to create engine\n");
         return 1;
@@ -148,7 +144,6 @@ int main(void){
 
     printf("\n=== FACT DATABASE ===\n");
     printFactDB(engine_get_factdb(e));
-
     printf("=== RULE ASTs ===\n");
     rule_engine_for_each(engine_get_rule_engine(e), print_rule_visitor, NULL);
 
