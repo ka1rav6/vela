@@ -2,8 +2,10 @@
 
 // gets the value of a numeric fact from the fact DB by searching for its name.
 // Thread-safe: read-locked, since multiple readers can look up facts concurrently.
-double getNumFact(FactDB* db, const char* name){
+double getNumFact(FactDB* db, const char* name)
+{
     pthread_rwlock_rdlock(&db->lock);
+
     NumFact* f;
     HASH_FIND_STR(db->numFacts, name, f);
     double result = f ? f->val : NOT_FOUND;
@@ -12,7 +14,8 @@ double getNumFact(FactDB* db, const char* name){
 }
 
 // Similar to getNumFact but for boolean facts
-bool getBoolFact(FactDB* db, const char* name){
+bool getBoolFact(FactDB* db, const char* name)
+{
     pthread_rwlock_rdlock(&db->lock);
     BoolFact* f;
     HASH_FIND_STR(db->boolFacts, name, f);
@@ -23,9 +26,11 @@ bool getBoolFact(FactDB* db, const char* name){
 
 // evaluates a node in the AST by recursively evaluating its children and applying the appropriate logic
 // now not used ever since bytecode has started being used. This was the initial evaluating function
-bool evaluate(FactDB* db, Node* n){
+bool evaluate(FactDB* db, Node* n)
+{
 
-    switch(n->type){
+    switch(n->type)
+    {
         case NODE_AND:
             return evaluate(db, n->data.op.left) && evaluate(db, n->data.op.right);
         case NODE_OR:
@@ -39,7 +44,8 @@ bool evaluate(FactDB* db, Node* n){
             double rhs = n->data.Compare.val;
 
             // compare the operator and return whether the comparison is correct
-            switch(n->data.Compare.op){
+            switch(n->data.Compare.op)
+            {
                 case OP_LT:
                     return lhs <  rhs;
                 case OP_GT:
@@ -62,16 +68,19 @@ bool evaluate(FactDB* db, Node* n){
 }
 
 // constructor for factDB
-FactDB* createFactDB(){
+FactDB* createFactDB()
+{
     FactDB* temp = (FactDB*)malloc(sizeof(FactDB));
-    if (temp == NULL){
+    if (temp == NULL)
+    {
         fprintf(stderr, "Could not allocate space for FactDB\n");
         return NULL;
     }
     memset(temp, 0, sizeof(FactDB));
     temp->boolFacts = NULL;
     temp->numFacts  = NULL;
-    if (pthread_rwlock_init(&temp->lock, NULL) != 0){
+    if (pthread_rwlock_init(&temp->lock, NULL) != 0)
+    {
         fprintf(stderr, "Could not initialize FactDB lock\n");
         free(temp);
         return NULL;
@@ -80,14 +89,17 @@ FactDB* createFactDB(){
 }
 
 // destructor for factDB that frees all the memory allocated for the facts and the fact DB itself
-void deleteFactDB(FactDB* db){
+void deleteFactDB(FactDB* db)
+{
     NumFact *currNum, *tempNum;
-    HASH_ITER(hh, db->numFacts, currNum, tempNum){
+    HASH_ITER(hh, db->numFacts, currNum, tempNum)
+    {
         HASH_DEL(db->numFacts, currNum);
         free(currNum);
     }
     BoolFact* currBool, *tempBool;
-    HASH_ITER(hh, db->boolFacts, currBool, tempBool){
+    HASH_ITER(hh, db->boolFacts, currBool, tempBool)
+    {
         HASH_DEL(db->boolFacts,  currBool);
         free(currBool);
     }
@@ -102,16 +114,19 @@ void deleteFactDB(FactDB* db){
 // sets the value of a fact in the fact DB by searching for its name and UPDATING THE VALUE IF IT EXISTS,
 // or adding a new fact if it does not exist.
 // Thread-safe: write-locked, exclusive against both readers and other writers.
-void setBoolFact(FactDB* db, const char* name, bool val){
+void setBoolFact(FactDB* db, const char* name, bool val)
+{
     pthread_rwlock_wrlock(&db->lock);
     BoolFact *f;
     HASH_FIND_STR(db->boolFacts, name, f);
-    if (f){
+    if (f)
+    {
         f->val = val;
         pthread_rwlock_unlock(&db->lock);
         return;
     }
-    if (strlen(name) > MAX_NAME){
+    if (strlen(name) > MAX_NAME)
+    {
         pthread_rwlock_unlock(&db->lock);
         fprintf(stderr, "Cannot have a fact name that exceeds the limit of %d letters: %s\n", MAX_NAME, name);
         return;
@@ -125,16 +140,19 @@ void setBoolFact(FactDB* db, const char* name, bool val){
 }
 
 // Similar to setBoolFact but for numeric facts
-void setNumFact(FactDB* db, const char* name, double val){
+void setNumFact(FactDB* db, const char* name, double val)
+{
     pthread_rwlock_wrlock(&db->lock);
     NumFact* f;
     HASH_FIND_STR(db->numFacts, name, f);
-    if (f){
+    if (f)
+    {
         f->val = val;
         pthread_rwlock_unlock(&db->lock);
         return;
     }
-    if (strlen(name) > MAX_NAME){
+    if (strlen(name) > MAX_NAME)
+    {
         pthread_rwlock_unlock(&db->lock);
         fprintf(stderr, "Cannot have a fact name that exceeds the limit of %d letters: %s\n", MAX_NAME, name);
         return;
@@ -147,7 +165,8 @@ void setNumFact(FactDB* db, const char* name, double val){
     pthread_rwlock_unlock(&db->lock);
 }
 
-bool factdb_has_bool(FactDB* db, const char* name){
+bool factdb_has_bool(FactDB* db, const char* name)
+{
     pthread_rwlock_rdlock(&db->lock);
     BoolFact* f;
     HASH_FIND_STR(db->boolFacts, name, f);
@@ -156,7 +175,8 @@ bool factdb_has_bool(FactDB* db, const char* name){
     return found;
 }
 
-bool factdb_has_num(FactDB* db, const char* name){
+bool factdb_has_num(FactDB* db, const char* name)
+{
     pthread_rwlock_rdlock(&db->lock);
     NumFact* f;
     HASH_FIND_STR(db->numFacts, name, f);
@@ -166,7 +186,8 @@ bool factdb_has_num(FactDB* db, const char* name){
 }
 
 // Debug/inspection helper: prints all facts. Read-locked for the whole
-void printFactDB(FactDB* db){
+void printFactDB(FactDB* db)
+{
     pthread_rwlock_rdlock(&db->lock);
     printf("=== FACT DB ===\n");
     printf("[BOOL FACTS]\n");

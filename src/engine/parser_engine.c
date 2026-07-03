@@ -4,9 +4,11 @@
 #include "../../include/bytecode.h"
 
 // Checks if file exists in file system * by manually opening it and checking
-static bool fileExists(const char* filename) {
+static bool fileExists(const char* filename)
+{
     FILE* file = fopen(filename, "r");
-    if (file) { 
+    if (file)
+    { 
         fclose(file);
         return true;
     }
@@ -14,13 +16,16 @@ static bool fileExists(const char* filename) {
 }
 
 // Parses the json with the yyjson method
-yyjson_doc* parseJSON(const char * file){
-    if (!fileExists(file)) {
+yyjson_doc* parseJSON(const char * file)
+{
+    if (!fileExists(file))
+    {
        fprintf(stderr, "File not found: %s\n", file);
        return NULL;
     }
     yyjson_doc * doc = yyjson_read_file(file, 0, NULL, NULL);
-    if (!doc){
+    if (!doc)
+    {
         fprintf(stderr, "Invalid JSON format!\n");
         return NULL;
     }
@@ -30,7 +35,8 @@ yyjson_doc* parseJSON(const char * file){
 // the main AST (rule engine is built here) parses the json doc and 
 // calls a function to build the fact database (hence passed as reference) 
 // and creates the rule and adds it to the engine
-RuleEngine* build_ast(yyjson_doc* doc, FactDB* db, ActionEntry* g_registry){
+RuleEngine* build_ast(yyjson_doc* doc, FactDB* db, ActionEntry* g_registry)
+{
     yyjson_val* root = yyjson_doc_get_root(doc);
     
     // Keeps FactDB completely on the standard heap
@@ -38,7 +44,8 @@ RuleEngine* build_ast(yyjson_doc* doc, FactDB* db, ActionEntry* g_registry){
     
     yyjson_val* rulesArr = yyjson_obj_get(root, "rules");
     RuleEngine* engine   = createRuleEngine(); // engine constructor
-    if (!engine) {
+    if (!engine)
+    {
         yyjson_doc_free(doc);
         return NULL;
     }
@@ -47,16 +54,19 @@ RuleEngine* build_ast(yyjson_doc* doc, FactDB* db, ActionEntry* g_registry){
     size_t max = 0;          // these values are modified inside the for each loop
     yyjson_val* rule = NULL;
 
-    yyjson_arr_foreach(rulesArr, idx, max, rule){ // built in iteration of yyjson
+    yyjson_arr_foreach(rulesArr, idx, max, rule)
+    { // built in iteration of yyjson
         yyjson_val* name = yyjson_obj_get(rule, "name");
-        if (!name){
+        if (!name)
+        {
             fprintf(stderr, "A RULE DOES NOT HAVE A NAME!\n");
             yyjson_doc_free(doc);
             deleteRuleEngine(engine);
             return NULL;
         }
         yyjson_val* action = yyjson_obj_get(rule, "action");
-        if (!action){
+        if (!action)
+        {
             fprintf(stderr, "The action for the rule name %s does not exist\n", yyjson_get_str(name));
             yyjson_doc_free(doc);
             deleteRuleEngine(engine);
@@ -65,7 +75,8 @@ RuleEngine* build_ast(yyjson_doc* doc, FactDB* db, ActionEntry* g_registry){
         yyjson_val* cond = yyjson_obj_get(rule, "if");
 
         Rule* r = (Rule*)arena_alloc(engine->arena, sizeof(Rule));
-        if (!r) {
+        if (!r)
+        {
             fprintf(stderr, "Memory allocation failed for rule\n");
             yyjson_doc_free(doc);
             deleteRuleEngine(engine);
@@ -76,19 +87,22 @@ RuleEngine* build_ast(yyjson_doc* doc, FactDB* db, ActionEntry* g_registry){
         r->action = arena_strdup(engine->arena, yyjson_get_str(action));
         
         ActionEntry* ae = lookupAction(g_registry, r->action);
-        if (ae) {
+        if (ae)
+        {
             r->func = action_entry_func(ae);
             r->ctx  = action_entry_ctx(ae);
         }
         r->condition = build_node(engine->arena, db, cond);
-        if (!r->condition) {
+        if (!r->condition)
+        {
             fprintf(stderr, "Failed to build condition for rule: %s\n", r->ruleName);
             yyjson_doc_free(doc);
             deleteRuleEngine(engine);
             return NULL;
         }
         r->bc        = compileNode(engine->arena, r->condition);
-        if (duplicateRule(engine, r->ruleName)){
+        if (duplicateRule(engine, r->ruleName))
+        {
             fprintf(stderr, "Two different rules have the same name: %s\n", r->ruleName);
             yyjson_doc_free(doc);
             deleteRuleEngine(engine);
@@ -102,7 +116,8 @@ RuleEngine* build_ast(yyjson_doc* doc, FactDB* db, ActionEntry* g_registry){
 }
 
 // main node builder function that checks the type of the node to be built and calls the appropriate function to build it
-static Node* build_node(Arena* ar, FactDB* db, yyjson_val* v){
+static Node* build_node(Arena* ar, FactDB* db, yyjson_val* v)
+{
     if (yyjson_is_str(v))
         return build_fact(ar, db, v);
     if (!yyjson_is_obj(v))
@@ -111,10 +126,12 @@ static Node* build_node(Arena* ar, FactDB* db, yyjson_val* v){
     yyjson_obj_iter iter;
     yyjson_obj_iter_init(v, &iter);
     yyjson_val* key;
-    while ((key = yyjson_obj_iter_next(&iter))){
+    while ((key = yyjson_obj_iter_next(&iter)))
+    {
         const char* op  = yyjson_get_str(key);
         yyjson_val* val = yyjson_obj_iter_get_val(key);
-        if (!isOperator(op)){
+        if (!isOperator(op))
+        {
             fprintf(stderr, "Not a valid operator: %s\n", op);
             return NULL;
         }
@@ -135,11 +152,13 @@ static Node* build_node(Arena* ar, FactDB* db, yyjson_val* v){
     return NULL;
 }
 // builds the fact node by checking if the fact exists in the fact DB and storing its name in the node
-static Node* build_fact(Arena* ar, FactDB* db, yyjson_val* v){
+static Node* build_fact(Arena* ar, FactDB* db, yyjson_val* v)
+{
     Node* n = createNode(ar, NODE_FACT); // Pass ar
     if (!n) return NULL;
     n->data.Fact.factName = arena_strdup(ar, yyjson_get_str(v)); // Use arena_strdup
-    if (!factExists(db, n->data.Fact.factName, BOOL) && !factExists(db, n->data.Fact.factName, NUM)){
+    if (!factExists(db, n->data.Fact.factName, BOOL) && !factExists(db, n->data.Fact.factName, NUM))
+    {
         fprintf(stderr, "The fact: %s, does not exist but is used\n", n->data.Fact.factName);
         return NULL;
     }
@@ -149,7 +168,8 @@ static Node* build_fact(Arena* ar, FactDB* db, yyjson_val* v){
 // builds the compare node by checking the operator 
 // and the operands and storing them in the node also checks for the validity of the comparison
 // (e.g. comparing a bool fact with a number is not valid)    
-static Node* build_compare(Arena* ar, FactDB* db, const char* op, yyjson_val* arr){
+static Node* build_compare(Arena* ar, FactDB* db, const char* op, yyjson_val* arr)
+{
     Node* n = createNode(ar, NODE_COMPARE); // Pass ar
     if (!n) return NULL;
     n->data.Compare.val = NAN;  
@@ -159,7 +179,8 @@ static Node* build_compare(Arena* ar, FactDB* db, const char* op, yyjson_val* ar
 
     n->data.Compare.factName = arena_strdup(ar, yyjson_get_str(left)); // string is duplicated and stored in the arena itself
 
-    if (!isComparisonCorrect(db, n->data.Compare.factName)){ // defined in semanticChecker.c 
+    if (!isComparisonCorrect(db, n->data.Compare.factName))
+    { // defined in semanticChecker.c 
         fprintf(stderr, "Incorrect: Tried comparing bool with number: %s\n", n->data.Compare.factName);
         return NULL;
     }
@@ -169,7 +190,8 @@ static Node* build_compare(Arena* ar, FactDB* db, const char* op, yyjson_val* ar
     if (yyjson_is_real(right)) // => right is double
          n->data.Compare.val = (double)yyjson_get_real(right);
 
-    if (isnan(n->data.Compare.val)){
+    if (isnan(n->data.Compare.val))
+    {
         fprintf(stderr, "Invalid comparison value (NAN) for fact '%s'\n", n->data.Compare.factName);
         return NULL;
     }
@@ -194,15 +216,18 @@ static Node* build_compare(Arena* ar, FactDB* db, const char* op, yyjson_val* ar
  * builds the and/or nodes by iterating through the array of conditions and building the left and right nodes recursively
  * USED TO BE TWO FUNCTIONS BUT THEY WERE VERY SIMILAR SO I COMBINED THEM INTO ONE FUNCTION AND PASSED THE TYPE OF OPERATOR AS A PARAMETER
 */
-static Node* build_and_or(Arena* ar, FactDB* db, yyjson_val* arr, Type t){
+static Node* build_and_or(Arena* ar, FactDB* db, yyjson_val* arr, Type t)
+{
     const char* opName = (t == NODE_AND) ? "and" : "or";
 
     // semantic checking
-    if (isEmptyOrUndersizedArray(arr, opName)){
+    if (isEmptyOrUndersizedArray(arr, opName))
+    {
         fprintf(stderr, "Empty or single-element array for '%s'\n", opName);
         return NULL;
     }
-    if (isMixedBoolNumArray(db, arr)){
+    if (isMixedBoolNumArray(db, arr))
+    {
         fprintf(stderr, "Mixed bool/num facts in '%s' expression\n", opName);
         return NULL;
     }
@@ -212,7 +237,8 @@ static Node* build_and_or(Arena* ar, FactDB* db, yyjson_val* arr, Type t){
     // building the node and assigning the children accordingly
     Node* left = build_node(ar, db, yyjson_arr_get(arr, 0));
     if (!left) return NULL;
-    for (size_t i = 1; i < len; i++){
+    for (size_t i = 1; i < len; i++)
+    {
         Node* right = build_node(ar, db, yyjson_arr_get(arr, i));
         if (!right) return NULL;
         Node* parent = createNode(ar, t); // Pass ar
@@ -225,8 +251,10 @@ static Node* build_and_or(Arena* ar, FactDB* db, yyjson_val* arr, Type t){
 }
 
 // builds the not node in the similar way
-static Node* build_not(Arena* ar, FactDB* db, yyjson_val* v){
-    if (yyjson_is_arr(v) && isEmptyOrUndersizedArray(v, "not")){
+static Node* build_not(Arena* ar, FactDB* db, yyjson_val* v)
+{
+    if (yyjson_is_arr(v) && isEmptyOrUndersizedArray(v, "not"))
+    {
         fprintf(stderr, "Empty array for 'not'\n");
         return NULL;
     }
@@ -240,7 +268,8 @@ static Node* build_not(Arena* ar, FactDB* db, yyjson_val* v){
 // builds the fact database by iterating through the "facts" object in the json 
 // and adding each fact to the database with its value and type
 
-static void build_factdb(FactDB* db, yyjson_val* root){
+static void build_factdb(FactDB* db, yyjson_val* root)
+{
     yyjson_val* facts = yyjson_obj_get(root, "facts");
     if (!facts || !yyjson_is_obj(facts)) 
         return;
@@ -249,7 +278,8 @@ static void build_factdb(FactDB* db, yyjson_val* root){
     yyjson_obj_iter_init(facts, &iter);
     yyjson_val *key, *val;
 
-    while ((key = yyjson_obj_iter_next(&iter))) { // assigning the key in the loop itself
+    while ((key = yyjson_obj_iter_next(&iter)))
+    { // assigning the key in the loop itself
         const char* name = yyjson_get_str(key);
         val = yyjson_obj_iter_get_val(key);
 

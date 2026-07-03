@@ -12,10 +12,13 @@ void runRuleEngine(RuleEngine* e, FactDB* db)
     printf("=== RUNNING RULE ENGINE ===\n");
     pthread_mutex_lock(&e->lock);
     Rule *cr, *tmp;
-    HASH_ITER(hh, e->rules, cr, tmp){
+    HASH_ITER(hh, e->rules, cr, tmp)
+    {
         // runBytecode does the whole eval process
-        if (runBytecode(db, cr->bc)){ // returns true only if OP_HALT instruction is present at the end.
-            if (cr->func){            // if the current rule has a function assigned to it
+        if (runBytecode(db, cr->bc))
+        { // returns true only if OP_HALT instruction is present at the end.
+            if (cr->func)
+            {            // if the current rule has a function assigned to it
                 cr->func(db, cr->ctx);
                 printf("Action Triggered: %s\n", cr->action); // Will be removed in production
             }
@@ -51,17 +54,20 @@ void deleteRule(Rule* r)
 RuleEngine* createRuleEngine()
 {
     RuleEngine* temp = (RuleEngine*)malloc(sizeof(RuleEngine));
-    if (!temp) {
+    if (!temp)
+    {
         fprintf(stderr, "Could not allocate space for RuleEngine\n");
         return NULL;
     }
     memset(temp, 0, sizeof(RuleEngine));
     temp->arena = createArena(RULE_ENGINE_ARENA_SIZE);
-    if (!temp->arena) {
+    if (!temp->arena)
+    {
         free(temp);
         return NULL;
     }
-    if (pthread_mutex_init(&temp->lock, NULL) != 0) {
+    if (pthread_mutex_init(&temp->lock, NULL) != 0)
+    {
         fprintf(stderr, "Could not initialize RuleEngine mutex\n");
         destroyArena(temp->arena);
         free(temp);
@@ -75,7 +81,8 @@ void deleteRuleEngine(RuleEngine* RE)
 {
     if (!RE) return;
     Rule *current_rule, *tmp;
-    HASH_ITER(hh, RE->rules, current_rule, tmp) { // iterates through all rules
+    HASH_ITER(hh, RE->rules, current_rule, tmp)
+    { // iterates through all rules
         HASH_DEL(RE->rules, current_rule);
     }
     destroyArena(RE->arena);
@@ -109,8 +116,10 @@ void rule_engine_bind_action(RuleEngine* e, const char* action_name, Action_f f,
 {
     pthread_mutex_lock(&e->lock);
     Rule *r, *tmp;
-    HASH_ITER(hh, e->rules, r, tmp) {
-        if (strcmp(r->action, action_name) == 0) {
+    HASH_ITER(hh, e->rules, r, tmp)
+    {
+        if (strcmp(r->action, action_name) == 0)
+        {
             r->func = f;
             r->ctx  = ctx;
         }
@@ -118,15 +127,18 @@ void rule_engine_bind_action(RuleEngine* e, const char* action_name, Action_f f,
     pthread_mutex_unlock(&e->lock);
 }
 
-const char* rule_name(const Rule* r) {
+const char* rule_name(const Rule* r)
+{
     return r ? r->ruleName : NULL;
 }
 
-const char* rule_action(const Rule* r) {
+const char* rule_action(const Rule* r)
+{
     return r ? r->action : NULL;
 }
 
-Node* rule_condition(const Rule* r) {
+Node* rule_condition(const Rule* r)
+{
     return r ? r->condition : NULL;
 }
 
@@ -137,7 +149,8 @@ void rule_engine_for_each(RuleEngine* e, RuleVisitor cb, void* user_ctx)
     if (!e || !cb) return;
     pthread_mutex_lock(&e->lock);
     Rule *r, *tmp;
-    HASH_ITER(hh, e->rules, r, tmp) {
+    HASH_ITER(hh, e->rules, r, tmp)
+    {
         cb(r, user_ctx);
     }
     pthread_mutex_unlock(&e->lock);
