@@ -23,7 +23,7 @@ char* ask_memory(size_t size)
 // constructor for the arena of size "size"
 Arena* createArena(size_t size)
 {
-    assert(size == 0); // no point of allocating an arena of size 0
+    assert(size != 0); // no point of allocating an arena of size 0
     Arena* ar = (Arena*)malloc(sizeof(Arena));
     if (!ar)
     {

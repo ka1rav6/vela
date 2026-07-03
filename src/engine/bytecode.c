@@ -7,6 +7,7 @@ static Bytecode* createBytecode(Arena* ar)
     bc->capacity = 8;
     bc->count    = 0;
     bc->code     = (Instr*)arena_alloc(ar, sizeof(Instr) * bc->capacity);
+    assert(bc->code != NULL);
     return bc;
 }
 
@@ -18,6 +19,7 @@ static void emit(Arena* ar, Bytecode* bc, Instr i)
         Instr* old   = bc->code;
         int newCap   = bc->capacity * 2;
         Instr* grown = (Instr*)arena_alloc(ar, sizeof(Instr) * newCap);
+        assert(grown != NULL);
         memcpy(grown, old, sizeof(Instr) * bc->count);
         bc->code     = grown;
         bc->capacity = newCap;
@@ -26,7 +28,7 @@ static void emit(Arena* ar, Bytecode* bc, Instr i)
 }
 
 
-// recursive function that evaluates and creates bytecode accordingly
+// recursive function that evaluates and adds instructions to bytecode
 static void compileWalk(Arena* ar, Bytecode* bc, Node* n)
 {
     switch (n->type)
@@ -80,8 +82,8 @@ static void compileWalk(Arena* ar, Bytecode* bc, Node* n)
 // the actual bytecode creator
 Bytecode* compileNode(Arena* ar, Node* n)
 {
-    Bytecode* bc = createBytecode(ar);
-    compileWalk(ar, bc, n);
+    Bytecode* bc = createBytecode(ar); // constructs the bytecode
+    compileWalk(ar, bc, n); //takes the node, evaluates it, converts it into an instruction and adds it into the bytecode
     Instr i;
     i.op = OP_HALT;
     emit(ar, bc, i);
@@ -112,6 +114,8 @@ static bool runCompare(FactDB* db, Instr* i)
     return false;
 }
 
+// the main function that runs the bytecode and using a stack 
+// returns true only if all the conditions for that particular bytecode are correct
 bool runBytecode(FactDB* db, Bytecode* bc)
 {
     bool stack[64];
@@ -151,6 +155,7 @@ bool runBytecode(FactDB* db, Bytecode* bc)
     return false;
 }
 
+// maps the enums to the strings respectfully
 const char* cmpOpStr[] = {
                             "OP_LT",
                             "OP_LE",
@@ -160,6 +165,7 @@ const char* cmpOpStr[] = {
                             "OP_NE"
                          };
 
+// maps the enums to the strings respectfully
 const char* opcode_str[] = {
                             "OP_PUSH_FACT",
                             "OP_PUSH_CMP" ,
@@ -169,7 +175,7 @@ const char* opcode_str[] = {
                             "OP_HALT"
                            };
 
-
+// prints the bytecode : mainly used for debugging
 void printByteCode(Bytecode* bc){
     FILE* fp = NULL;
     fp = fopen("re.vela.cache", "w");
