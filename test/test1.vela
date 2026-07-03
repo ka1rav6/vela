@@ -15,30 +15,30 @@ FACT $loginAttempts 2
 FACT $accountAgeDays 365
 
 # Rules
-RULE $rule_simple_bool_true isAdmin
-RULE $rule_simple_bool_false isBanned
-RULE $rule_compare_gt age > 18
-RULE $rule_compare_lt score < 100
-RULE $rule_compare_ge balance >= 1500
-RULE $rule_compare_le loginAttempts <= 5
-RULE $rule_compare_eq itemCount == 3
-RULE $rule_compare_ne discount != 0
-RULE $rule_compare_float temperature > 98.0
-RULE $rule_and_two isAdmin AND isVerified
-RULE $rule_or_two isRegular OR isPremium
-RULE $rule_not_bool NOT isBanned
-RULE $rule_not_bool_false NOT isAdmin
-RULE $rule_and_three isAdmin AND isVerified AND isPremium
-RULE $rule_or_three isGuest OR isRegular OR isAdmin
-RULE $rule_and_with_compare age > 18 AND balance >= 1000
-RULE $rule_or_with_compare score > 100 OR isPremium
-RULE $rule_not_with_compare NOT loginAttempts > 10
-RULE $rule_nested_and_or isAdmin AND (balance > 500 OR isPremium)
-RULE $rule_nested_or_and isBanned OR (isVerified AND age > 18)
-RULE $rule_deep_nesting isAdmin AND ((age > 18 AND age < 65) OR isPremium) AND NOT isBanned
-RULE $rule_not_or NOT (isBanned OR isGuest)
-RULE $rule_not_and NOT (isGuest AND isBanned)
-RULE $rule_old_account_big_balance accountAgeDays >= 300 AND balance > 1000
-RULE $rule_range_check score >= 0 AND score <= 100
-RULE $rule_zero_discount_and_items discount == 0 AND itemCount > 0
-RULE $rule_complex_access isAdmin AND isVerified AND NOT isBanned AND age > 18 AND (balance >= 500 OR isPremium)
+RULE $rule_simple_bool_true $SIMPLE_BOOL_FIRED isAdmin
+RULE $rule_simple_bool_false $SHOULD_NOT_FIRE isBanned
+RULE $rule_compare_gt $AGE_OVER_18 age > 18
+RULE $rule_compare_lt $SCORE_UNDER_100 score < 100
+RULE $rule_compare_ge $BALANCE_GE_1500 balance >= 1500
+RULE $rule_compare_le $LOGIN_ATTEMPTS_LE_5 loginAttempts <= 5
+RULE $rule_compare_eq $ITEM_COUNT_EQUALS_3 itemCount == 3
+RULE $rule_compare_ne $DISCOUNT_NOT_ZERO discount != 0
+RULE $rule_compare_float $FEVER_DETECTED temperature > 98.0
+RULE $rule_and_two $ADMIN_AND_VERIFIED isAdmin AND isVerified
+RULE $rule_or_two $REGULAR_OR_PREMIUM isRegular OR isPremium
+RULE $rule_not_bool $NOT_BANNED NOT isBanned
+RULE $rule_not_bool_false $SHOULD_NOT_FIRE_NOT NOT isAdmin
+RULE $rule_and_three $ADMIN_VERIFIED_PREMIUM isAdmin AND isVerified AND isPremium
+RULE $rule_or_three $GUEST_OR_REGULAR_OR_ADMIN isGuest OR isRegular OR isAdmin
+RULE $rule_and_with_compare $ADULT_WITH_BALANCE age > 18 AND balance >= 1000
+RULE $rule_or_with_compare $HIGH_SCORE_OR_PREMIUM score > 100 OR isPremium
+RULE $rule_not_with_compare $NOT_HIGH_RISK_LOGIN NOT loginAttempts > 10
+RULE $rule_nested_and_or $NESTED_AND_OR_FIRED isAdmin AND (balance > 500 OR isPremium)
+RULE $rule_nested_or_and $NESTED_OR_AND_FIRED isBanned OR (isVerified AND age > 18)
+RULE $rule_deep_nesting $DEEP_NEST_FIRED isAdmin AND ((age > 18 AND age < 65) OR isPremium) AND NOT isBanned
+RULE $rule_not_or $NEITHER_BANNED_NOR_GUEST NOT (isBanned OR isGuest)
+RULE $rule_not_and $NOT_BOTH_GUEST_AND_BANNED NOT (isGuest AND isBanned)
+RULE $rule_old_account_big_balance $LOYAL_HIGH_SPENDER accountAgeDays >= 300 AND balance > 1000
+RULE $rule_range_check $SCORE_IN_RANGE score >= 0 AND score <= 100
+RULE $rule_zero_discount_and_items $NO_DISCOUNT_HAS_ITEMS discount == 0 AND itemCount > 0
+RULE $rule_complex_access $FULL_ACCESS_GRANTED isAdmin AND isVerified AND NOT isBanned AND age > 18 AND (balance >= 500 OR isPremium)

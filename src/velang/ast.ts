@@ -40,6 +40,7 @@ export type Statement = RuleStmt | FactStmt | CondStmt;
 export interface RuleStmt {
     kind: "rule";
     name: string;
+    action: string;
     expr: Expr;
 }
 

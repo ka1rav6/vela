@@ -104,9 +104,17 @@ export default function toBytecode(fileName: string, program: Program): void {
         // Encode rule name: 1 byte length + name bytes (no null terminator, max 63)
         const nameBuf = Buffer.from(s.name, "utf8");
         const nameLen = Math.min(nameBuf.length, 63);
-        const meta = Buffer.alloc(1 + nameLen);
-        meta.writeUInt8(nameLen, 0);
-        nameBuf.copy(meta, 1, 0, nameLen);
+        // Encode action name: 1 byte length + action bytes
+        const actionBuf = Buffer.from(s.action, "utf8");
+        const actionLen = Math.min(actionBuf.length, 63);
+        const meta = Buffer.alloc(1 + nameLen + 1 + actionLen);
+        let off = 0;
+        meta.writeUInt8(nameLen, off++);
+        nameBuf.copy(meta, off, 0, nameLen);
+        off += nameLen;
+        meta.writeUInt8(actionLen, off++);
+        actionBuf.copy(meta, off, 0, actionLen);
+        off += actionLen;
         chunks.push(meta);
 
         // Compile condition expression
