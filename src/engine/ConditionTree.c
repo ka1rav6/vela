@@ -2,9 +2,11 @@
 
 
 // Node constructor that allocates memory for a new node and initializes its type and data
-Node* createNode(Arena* ar, Type t){
+Node* createNode(Arena* ar, Type t)
+{
     Node* temp = (Node*)arena_alloc(ar, sizeof(Node));
-    if (temp == NULL){
+    if (temp == NULL)
+    {
         fprintf(stderr, "Memory allocation failed for node\n");
         return NULL;
     }
