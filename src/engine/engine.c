@@ -16,7 +16,8 @@ Engine* createEngine(const char* file, FileType type){
     temp->db        = createFactDB();
     if (type == JSON)
         temp->r_engine  = build_ast(parseJSON(file), temp->db, temp->action_registry);
-    else loadBytecode(file); // TODO: To create
+    else
+        temp->r_engine  = loadBytecode(file, temp->db);
     if (pthread_mutex_init(&temp->lock, NULL) != 0) {
         FATAL("Could not initialize Engine mutex\n");
     }
