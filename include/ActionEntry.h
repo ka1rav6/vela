@@ -6,7 +6,7 @@
 /* Opaque handle. Internals are hidden in ActionEntry_internal.h. */
 typedef struct ActionEntry ActionEntry;
 
-void registerAction(ActionEntry**, const char* action, Action_f func, void* ctx);
+int registerAction(ActionEntry**, const char* action, Action_f func, void* ctx);
 ActionEntry* lookupAction(ActionEntry*, const char* action);
 void freeRegistry(ActionEntry**);
 

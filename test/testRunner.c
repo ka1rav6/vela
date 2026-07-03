@@ -110,6 +110,10 @@ int main(void){
        
        /* Engine creation — callbacks are wired automatically */
        Engine* e = createEngine("../test/test.json", JSON);
+    if (!e) {
+        fprintf(stderr, "Failed to create engine\n");
+        return 1;
+    }
     // --- rules that SHOULD fire ---
     registerTheAction(e, "SIMPLE_BOOL_FIRED",        cb_pass, "SIMPLE_BOOL_FIRED: isAdmin=true");
     registerTheAction(e, "AGE_OVER_18",              cb_pass, "AGE_OVER_18: age(25)>18");
@@ -149,7 +153,8 @@ int main(void){
     rule_engine_for_each(engine_get_rule_engine(e), print_rule_visitor, NULL);
 
     printf("=== RUNNING ENGINE ===\n");
-    runEngine(e);
+    if (runEngine(e) != 0)
+        fprintf(stderr, "Engine run returned an error\n");
 
     printf("\n=== RESULTS ===\n");
     printf("  Expected to fire    : 24\n");

@@ -10,8 +10,8 @@ typedef struct Engine Engine;
 
 Engine* createEngine(const char*, FileType);
 void deleteEngine(Engine*);
-void registerTheAction(Engine*, const char* name, Action_f, void*);
-void runEngine(Engine*);
+int registerTheAction(Engine*, const char* name, Action_f, void*);
+int runEngine(Engine*);
 
 // Read-only accessors
 FactDB*     engine_get_factdb(Engine*);

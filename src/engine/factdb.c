@@ -53,7 +53,8 @@ bool evaluate(FactDB* db, Node* n){
                 case OP_NE:
                     return lhs != rhs;
                 default:
-                    FATAL("UNKNOWN COMPARE OP\n");
+                    fprintf(stderr, "UNKNOWN COMPARE OP\n");
+                    return false;
             }
         }
     }
@@ -64,14 +65,16 @@ bool evaluate(FactDB* db, Node* n){
 FactDB* createFactDB(){
     FactDB* temp = (FactDB*)malloc(sizeof(FactDB));
     if (temp == NULL){
-        printf("COULD NOT ALLOCATE SPACE FOR FACT DB\n");
-        exit(1);
+        fprintf(stderr, "Could not allocate space for FactDB\n");
+        return NULL;
     }
     memset(temp, 0, sizeof(FactDB));
     temp->boolFacts = NULL;
     temp->numFacts  = NULL;
     if (pthread_rwlock_init(&temp->lock, NULL) != 0){
-        FATAL("Could not initialize FactDB lock\n");
+        fprintf(stderr, "Could not initialize FactDB lock\n");
+        free(temp);
+        return NULL;
     }
     return temp;
 }
@@ -108,12 +111,13 @@ void setBoolFact(FactDB* db, const char* name, bool val){
         pthread_rwlock_unlock(&db->lock);
         return;
     }
-    f = (BoolFact*) malloc(sizeof(BoolFact));
-    memset(f, 0, sizeof(BoolFact));
     if (strlen(name) > MAX_NAME){
         pthread_rwlock_unlock(&db->lock);
-        FATAL("Cannot have a fact name that exceeds the cound of %d letters. The action : %s does.", MAX_NAME, name);
+        fprintf(stderr, "Cannot have a fact name that exceeds the limit of %d letters: %s\n", MAX_NAME, name);
+        return;
     }
+    f = (BoolFact*) malloc(sizeof(BoolFact));
+    memset(f, 0, sizeof(BoolFact));
     strcpy(f->name, name);
     f->val = val;
     HASH_ADD_STR(db->boolFacts, name, f);
@@ -130,12 +134,13 @@ void setNumFact(FactDB* db, const char* name, double val){
         pthread_rwlock_unlock(&db->lock);
         return;
     }
-    f = (NumFact*)malloc(sizeof(NumFact));
-    memset(f, 0, sizeof(NumFact));
     if (strlen(name) > MAX_NAME){
         pthread_rwlock_unlock(&db->lock);
-        FATAL("Cannot have a fact name that exceeds the cound of %d letters. The action : %s does.", MAX_NAME, name);
+        fprintf(stderr, "Cannot have a fact name that exceeds the limit of %d letters: %s\n", MAX_NAME, name);
+        return;
     }
+    f = (NumFact*)malloc(sizeof(NumFact));
+    memset(f, 0, sizeof(NumFact));
     strcpy(f->name, name);
     f->val = val;
     HASH_ADD_STR(db->numFacts, name, f);

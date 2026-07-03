@@ -1,15 +1,21 @@
 #include "../../include/ActionEntry_internal.h"
 
-void registerAction(ActionEntry** g_registry, const char* action, Action_f func, void* ctx) {
-    ActionEntry* e = malloc(sizeof(ActionEntry));
-    memset(e, 0, sizeof(ActionEntry));
+int registerAction(ActionEntry** g_registry, const char* action, Action_f func, void* ctx) {
     if (strlen(action) > MAX_ACTION_NAME){
-        FATAL("Cannot have an action name that exceeds the cound of %d letters. The action : %s does.", MAX_ACTION_NAME, action);
+        fprintf(stderr, "Cannot have an action name that exceeds the limit of %d letters: %s\n", MAX_ACTION_NAME, action);
+        return -1;
     }
+    ActionEntry* e = malloc(sizeof(ActionEntry));
+    if (!e) {
+        fprintf(stderr, "Memory allocation failed for action entry\n");
+        return -1;
+    }
+    memset(e, 0, sizeof(ActionEntry));
     strcpy(e->action, action);
     e->func = func;
     e->ctx  = ctx;
     HASH_ADD_STR(*g_registry, action, e);
+    return 0;
 }
 
 ActionEntry* lookupAction(ActionEntry* g_registry, const char* action) {

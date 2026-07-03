@@ -10,7 +10,8 @@ char* ask_memory(size_t size) {
     void* ptr = mmap(NULL, size, PROT_READ | PROT_WRITE,
                       MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
     if (ptr == MAP_FAILED) {
-        FATAL("Arena memory mapping failed\n");
+        fprintf(stderr, "Arena memory mapping failed\n");
+        return NULL;
     }
     return (char*)ptr;
 }
@@ -19,13 +20,21 @@ char* ask_memory(size_t size) {
 Arena* createArena(size_t size) {
     Arena* ar = (Arena*)malloc(sizeof(Arena));
     if (!ar) {
-        FATAL("Could not allocate Arena struct\n");
+        fprintf(stderr, "Could not allocate Arena struct\n");
+        return NULL;
     }
     ar->start = ask_memory(size);
+    if (!ar->start) {
+        free(ar);
+        return NULL;
+    }
     ar->used  = 0;
     ar->size  = size;
     if (pthread_mutex_init(&ar->lock, NULL) != 0) {
-        FATAL("Could not initialize arena mutex\n");
+        fprintf(stderr, "Could not initialize arena mutex\n");
+        munmap(ar->start, ar->size);
+        free(ar);
+        return NULL;
     }
     return ar;
 }
@@ -40,7 +49,8 @@ void* arena_alloc(Arena* ar, size_t size) {
     size_t aligned = align_up(ar->used, ARENA_ALIGNMENT);
     if (size > ar->size - aligned) {
         pthread_mutex_unlock(&ar->lock);
-        FATAL("Arena out of memory: %zu bytes requested\n", size);
+        fprintf(stderr, "Arena out of memory: %zu bytes requested\n", size);
+        return NULL;
     }
     void* loc = ar->start + aligned;
     ar->used  = aligned + size;
@@ -71,7 +81,7 @@ void arena_reset(Arena* ar) {
 void destroyArena(Arena* ar) {
     if (!ar) return;
     if (munmap(ar->start, ar->size) == -1)
-        FATAL("MUNMAP FAILED!\n");
+        fprintf(stderr, "munmap failed\n");
     pthread_mutex_destroy(&ar->lock);
     free(ar);
 }

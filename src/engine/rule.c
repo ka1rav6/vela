@@ -52,13 +52,20 @@ RuleEngine* createRuleEngine()
 {
     RuleEngine* temp = (RuleEngine*)malloc(sizeof(RuleEngine));
     if (!temp) {
-        printf("COULD NOT ALLOCATE SPACE FOR RULE\n");
-        exit(EXIT_FAILURE);
+        fprintf(stderr, "Could not allocate space for RuleEngine\n");
+        return NULL;
     }
     memset(temp, 0, sizeof(RuleEngine));
     temp->arena = createArena(RULE_ENGINE_ARENA_SIZE);
+    if (!temp->arena) {
+        free(temp);
+        return NULL;
+    }
     if (pthread_mutex_init(&temp->lock, NULL) != 0) {
-        FATAL("Could not initialize RuleEngine mutex\n");
+        fprintf(stderr, "Could not initialize RuleEngine mutex\n");
+        destroyArena(temp->arena);
+        free(temp);
+        return NULL;
     }
     return temp;
 }

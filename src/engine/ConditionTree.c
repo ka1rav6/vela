@@ -5,7 +5,8 @@
 Node* createNode(Arena* ar, Type t){
     Node* temp = (Node*)arena_alloc(ar, sizeof(Node));
     if (temp == NULL){
-        FATAL("Memory allocation failed\n");
+        fprintf(stderr, "Memory allocation failed for node\n");
+        return NULL;
     }
     memset(temp, 0, sizeof(Node));
     temp->type = t;
