@@ -20,7 +20,7 @@ typedef struct Rule Rule;
 typedef struct RuleEngine RuleEngine;
 
 void runRuleEngine(RuleEngine*, FactDB*);
-Rule* createRule(RuleEngine*, Node*, char*, char*, void*);
+Rule* createRule(RuleEngine*, Node*, const char*, const char*, void*);
 RuleEngine* createRuleEngine(void);
 void addRule(RuleEngine*, Rule*);
 void deleteRuleEngine(RuleEngine*);

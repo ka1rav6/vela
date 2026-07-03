@@ -32,7 +32,7 @@ void runRuleEngine(RuleEngine* e, FactDB* db)
 }
 
 // simple rule constructor
-Rule* createRule(RuleEngine* e, Node* n, char* action, char* name, void* ctx)
+Rule* createRule(RuleEngine* e, Node* n, const char* action, const char* name, void* ctx)
 {
     Rule* temp      = (Rule*)arena_alloc(e->arena, sizeof(Rule));
     temp->condition = n;

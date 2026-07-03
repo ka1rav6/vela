@@ -87,6 +87,32 @@ RuleEngine* loadBytecode(const char* file, FactDB* db)
         }
         ruleName[nameLen] = '\0';
 
+        uint8_t actionLen;
+        if (fread(&actionLen, 1, 1, fp) != 1)
+        {
+            fprintf(stderr, "Could not read action name length for rule: %s\n", ruleName);
+            fclose(fp);
+            deleteRuleEngine(engine);
+            return NULL;
+        }
+        if (actionLen >= MAX_RULE_NAME)
+        {
+            fprintf(stderr, "Action name too long (%u bytes) for rule: %s\n", actionLen, ruleName);
+            fclose(fp);
+            deleteRuleEngine(engine);
+            return NULL;
+        }
+
+        char actionName[MAX_RULE_NAME];
+        if (actionLen > 0 && fread(actionName, 1, actionLen, fp) != actionLen)
+        {
+            fprintf(stderr, "Could not read action name for rule: %s\n", ruleName);
+            fclose(fp);
+            deleteRuleEngine(engine);
+            return NULL;
+        }
+        actionName[actionLen] = '\0';
+
         Bytecode* bc = arena_alloc(engine->arena, sizeof(Bytecode));
         if (!bc)
         {
@@ -200,7 +226,7 @@ RuleEngine* loadBytecode(const char* file, FactDB* db)
         }
         memset(rule, 0, sizeof(Rule));
         strcpy(rule->ruleName, ruleName);
-        rule->action    = arena_strdup(engine->arena, ruleName);
+        rule->action    = arena_strdup(engine->arena, actionName);
         rule->bc        = bc;
         rule->condition = NULL;
         addRule(engine, rule);
