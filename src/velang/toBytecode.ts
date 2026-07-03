@@ -78,12 +78,13 @@ function compileExpr(expr: Expr): Buffer[] {
     }
 }
 
-// to reate the header of each binary file
-function createHeader(magic: number, version: number, instrNum: number): Buffer {
-    const buf = Buffer.alloc(12);
-    buf.writeUInt32LE(magic,    0);  // shows that this is a vela binary
-    buf.writeUInt32LE(version,  4);  // a version number to check compatibility
-    buf.writeUInt32LE(instrNum, 8);
+// to create the header of each binary file
+function createHeader(magic: number, version: number, instrNum: number, ruleCount: number): Buffer {
+    const buf = Buffer.alloc(16);
+    buf.writeUInt32LE(magic,      0);
+    buf.writeUInt32LE(version,    4);
+    buf.writeUInt32LE(instrNum,   8);
+    buf.writeUInt32LE(ruleCount, 12);
     return buf;
 }
 
@@ -93,18 +94,30 @@ function createHeader(magic: number, version: number, instrNum: number): Buffer 
 // all buffers are compiled and concatinated in the end
 export default function toBytecode(fileName: string, program: Program): void {
     const chunks: Buffer[] = [];
-    let instrCount = 0; // calculated through the loop and ultimately written out to the header of the binary
+    let instrCount = 0;
+    let ruleCount = 0;
 
     for (const stmt of program.statements) {
         if (stmt.kind !== "rule") continue;
-        const expr   = (stmt as RuleStmt).expr;
-        const instrs = compileExpr(expr);
+        const s = stmt as RuleStmt;
+
+        // Encode rule name: 1 byte length + name bytes (no null terminator, max 63)
+        const nameBuf = Buffer.from(s.name, "utf8");
+        const nameLen = Math.min(nameBuf.length, 63);
+        const meta = Buffer.alloc(1 + nameLen);
+        meta.writeUInt8(nameLen, 0);
+        nameBuf.copy(meta, 1, 0, nameLen);
+        chunks.push(meta);
+
+        // Compile condition expression
+        const instrs = compileExpr(s.expr);
         chunks.push(...instrs);
         instrCount += instrs.length;
         chunks.push(encodeHalt());
         instrCount++;
+        ruleCount++;
     }
-    const header     = createHeader(0x524C4542, 2, instrCount);
+    const header     = createHeader(0x524C4542, 3, instrCount, ruleCount);
     const final_file = fileName + ".velabc";
     writeFileSync(final_file, Buffer.concat([header, ...chunks]));
 }
