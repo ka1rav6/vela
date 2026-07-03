@@ -1,124 +1,92 @@
 #include "../../include/bytecode.h"
 
-// constructor for the bytecode
-static Bytecode* createBytecode(Arena* ar)
-{
-    Bytecode* bc = (Bytecode*)arena_alloc(ar, sizeof(Bytecode));
-    bc->capacity = 8;
-    bc->count    = 0;
-    bc->code     = (Instr*)arena_alloc(ar, sizeof(Instr) * bc->capacity);
-    assert(bc->code != NULL);
-    return bc;
-}
+#define STACK_MAX 256
 
-// increases capacity on overload, else just adds instruction to the bytecode.
-static void emit(Arena* ar, Bytecode* bc, Instr i)
+static int countInstr(Node* n)
 {
-    if (bc->count >= bc->capacity)
+    if (!n) return 0;
+    switch (n->type)
     {
-        Instr* old   = bc->code;
-        int newCap   = bc->capacity * 2;
-        Instr* grown = (Instr*)arena_alloc(ar, sizeof(Instr) * newCap);
-        assert(grown != NULL);
-        memcpy(grown, old, sizeof(Instr) * bc->count);
-        bc->code     = grown;
-        bc->capacity = newCap;
+        case NODE_AND:
+        case NODE_OR:
+            return countInstr(n->data.op.left) + countInstr(n->data.op.right) + 1;
+        case NODE_NOT:
+            return countInstr(n->data.unary.child) + 1;
+        case NODE_FACT:
+        case NODE_COMPARE:
+            return 1;
     }
-    bc->code[bc->count++] = i;
+    return 0;
 }
 
-
-// recursive function that evaluates and adds instructions to bytecode
-static void compileWalk(Arena* ar, Bytecode* bc, Node* n)
+static void compileWalk(Bytecode* bc, Node* n, int* pos)
 {
     switch (n->type)
     {
         case NODE_AND:
-        {
-            compileWalk(ar, bc, n->data.op.left);
-            compileWalk(ar, bc, n->data.op.right);
-            Instr i;
-            i.op = OP_AND; 
-            emit(ar, bc, i);
+            compileWalk(bc, n->data.op.left, pos);
+            compileWalk(bc, n->data.op.right, pos);
+            bc->code[(*pos)++] = (Instr){ .op = OP_AND };
             break;
-        }
         case NODE_OR:
-        {
-            compileWalk(ar, bc, n->data.op.left);
-            compileWalk(ar, bc, n->data.op.right);
-            Instr i;
-            i.op = OP_OR; 
-            emit(ar, bc, i);
+            compileWalk(bc, n->data.op.left, pos);
+            compileWalk(bc, n->data.op.right, pos);
+            bc->code[(*pos)++] = (Instr){ .op = OP_OR };
             break;
-        }
         case NODE_NOT:
-        {
-            compileWalk(ar, bc, n->data.unary.child);
-            Instr i;
-            i.op = OP_NOT; 
-            emit(ar, bc, i);
+            compileWalk(bc, n->data.unary.child, pos);
+            bc->code[(*pos)++] = (Instr){ .op = OP_NOT };
             break;
-        }
         case NODE_FACT:
-        {
-            Instr i;
-            i.op       = OP_PUSH_FACT;
-            i.factName = n->data.Fact.factName; 
-            emit(ar, bc, i);
+            bc->code[(*pos)++] = (Instr){
+                .op       = OP_PUSH_FACT,
+                .factName = n->data.Fact.factName,
+            };
             break;
-        }
         case NODE_COMPARE:
-        {
-            Instr i;
-            i.op       = OP_PUSH_CMP;
-            i.factName = n->data.Compare.factName;
-            i.cmp      = n->data.Compare.op;
-            i.val      = n->data.Compare.val;
-            emit(ar, bc, i);
+            bc->code[(*pos)++] = (Instr){
+                .op       = OP_PUSH_CMP,
+                .factName = n->data.Compare.factName,
+                .cmp      = n->data.Compare.op,
+                .val      = n->data.Compare.val,
+            };
             break;
-        }
     }
 }
-// the actual bytecode creator
+
 Bytecode* compileNode(Arena* ar, Node* n)
 {
-    Bytecode* bc = createBytecode(ar); // constructs the bytecode
-    compileWalk(ar, bc, n); //takes the node, evaluates it, converts it into an instruction and adds it into the bytecode
-    Instr i;
-    i.op = OP_HALT;
-    emit(ar, bc, i);
-    printByteCode(bc);
+    (void)ar;
+    int total   = countInstr(n) + 1;
+    Bytecode* bc = (Bytecode*)arena_alloc(ar, sizeof(Bytecode));
+    bc->code     = (Instr*)arena_alloc(ar, sizeof(Instr) * total);
+    bc->count    = total;
+    bc->capacity = total;
+    int pos = 0;
+    compileWalk(bc, n, &pos);
+    bc->code[pos++] = (Instr){ .op = OP_HALT };
     return bc;
 }
 
-// returns true if the comparison is correct
 static bool runCompare(FactDB* db, Instr* i)
 {
     double lhs = getNumFact(db, i->factName);
     double rhs = i->val;
     switch (i->cmp)
     {
-        case OP_LT:
-            return lhs < rhs;
-        case OP_GT:
-            return lhs > rhs;
-        case OP_LE:
-            return lhs <= rhs;
-        case OP_GE:
-            return lhs >= rhs;
-        case OP_EQ:
-            return lhs == rhs;
-        case OP_NE:
-            return lhs != rhs;
+        case OP_LT: return lhs <  rhs;
+        case OP_GT: return lhs >  rhs;
+        case OP_LE: return lhs <= rhs;
+        case OP_GE: return lhs >= rhs;
+        case OP_EQ: return lhs == rhs;
+        case OP_NE: return lhs != rhs;
     }
     return false;
 }
 
-// the main function that runs the bytecode and using a stack 
-// returns true only if all the conditions for that particular bytecode are correct
 bool runBytecode(FactDB* db, Bytecode* bc)
 {
-    bool stack[64];
+    bool stack[STACK_MAX];
     int sp = 0;
     for (int pc = 0; pc < bc->count; pc++)
     {
@@ -126,79 +94,31 @@ bool runBytecode(FactDB* db, Bytecode* bc)
         switch (i->op)
         {
             case OP_PUSH_FACT:
+                if (sp >= STACK_MAX) return false;
                 stack[sp++] = getBoolFact(db, i->factName);
                 break;
             case OP_PUSH_CMP:
+                if (sp >= STACK_MAX) return false;
                 stack[sp++] = runCompare(db, i);
                 break;
-            case OP_AND: 
-            {
-                bool b = stack[--sp];
-                bool a = stack[--sp];
-                stack[sp++] = a && b;
+            case OP_AND:
+                if (sp < 2) return false;
+                stack[sp - 2] = stack[sp - 2] && stack[sp - 1];
+                sp--;
                 break;
-            }
-            case OP_OR: 
-            {
-                bool b = stack[--sp];
-                bool a = stack[--sp];
-                stack[sp++] = a || b;
+            case OP_OR:
+                if (sp < 2) return false;
+                stack[sp - 2] = stack[sp - 2] || stack[sp - 1];
+                sp--;
                 break;
-            }
             case OP_NOT:
+                if (sp < 1) return false;
                 stack[sp - 1] = !stack[sp - 1];
                 break;
             case OP_HALT:
+                if (sp < 1) return false;
                 return stack[sp - 1];
         }
     }
     return false;
-}
-
-// maps the enums to the strings respectfully
-const char* cmpOpStr[] = {
-                            "OP_LT",
-                            "OP_LE",
-                            "OP_GT",
-                            "OP_GE",
-                            "OP_EQ",
-                            "OP_NE"
-                         };
-
-// maps the enums to the strings respectfully
-const char* opcode_str[] = {
-                            "OP_PUSH_FACT",
-                            "OP_PUSH_CMP" ,
-                            "OP_AND"      ,
-                            "OP_OR"       ,
-                            "OP_NOT"      ,
-                            "OP_HALT"
-                           };
-
-// prints the bytecode : mainly used for debugging
-void printByteCode(Bytecode* bc){
-    FILE* fp = NULL;
-    fp = fopen("re.vela.cache", "w");
-
-    for (int i = 0; i < bc->count; i++){
-
-        const char* OpC = opcode_str[bc->code[i].op];
-        fprintf(fp, "%s\n", OpC);                                 // first printing out the opcode
-
-        if (bc->code[i].op == OP_PUSH_CMP){
-            const char* cmpOp = cmpOpStr[bc->code[i].cmp];
-            fprintf(fp, "%s\n", cmpOp);                           // then the operator
-            fprintf(fp, "%lf\n", bc->code[i].val);
-            fprintf(fp, "Factname : %s\n", bc->code[i].factName); // then the fact name
-            fprintf(fp, "\n\n");
-        }
-        else if (bc->code[i].op == OP_PUSH_FACT){
-            fprintf(fp, "Factname : %s\n", bc->code[i].factName); // or simiply the fact name
-            fprintf(fp, "\n\n");
-        }
-        else {
-            fprintf(fp, "\n\n");
-        }
-    }
-    fclose(fp);
 }
