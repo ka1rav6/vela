@@ -27,5 +27,4 @@ typedef struct Node {
     Type type;
 } Node;
 
-void deleteNode(Node*);
 Node* createNode(Arena* ar, Type t);

@@ -1,7 +1,7 @@
-#include "../../include/rule_internal.h"
-#include "../../include/parser_engine.h"
-#include "../../include/semanticChecker.h"
-#include "../../include/bytecode.h"
+#include "rule_internal.h"
+#include "parser_engine.h"
+#include "semanticChecker.h"
+#include "bytecode.h"
 
 static Node* build_node(Arena*, FactDB*, yyjson_val*);
 static Node* build_and_or(Arena*, FactDB*, yyjson_val*, Type);

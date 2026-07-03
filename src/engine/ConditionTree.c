@@ -1,4 +1,4 @@
-#include "../../include/ConditionTree.h"
+#include "ConditionTree.h"
 
 
 // Node constructor that allocates memory for a new node and initializes its type and data
@@ -15,4 +15,4 @@ Node* createNode(Arena* ar, Type t)
     return temp;
 }
 
-// destructor is no longer needed as cleared along with the arena
+/* Memory is managed by the arena — no per-node teardown needed */

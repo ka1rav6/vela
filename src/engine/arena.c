@@ -1,4 +1,4 @@
-#include "../../include/arena_internal.h"
+#include "arena_internal.h"
 
 // aligns the allocator memory to align up (3 bytes -> 8 bytes)
 static inline size_t align_up(size_t n, size_t alignment)

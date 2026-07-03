@@ -1,4 +1,4 @@
-#include "../../include/engine_internal.h"
+#include "engine_internal.h"
 
 // Engine constructor. To be called by the user.
 Engine* createEngine(const char* file, FileType type)

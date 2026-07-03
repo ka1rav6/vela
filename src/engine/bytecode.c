@@ -1,6 +1,6 @@
-#include "../../include/bytecode.h"
+#include "bytecode.h"
 
-#define STACK_MAX 256
+enum { STACK_MAX = 256 };
 
 static int countInstr(Node* n)
 {
@@ -56,7 +56,6 @@ static void compileWalk(Bytecode* bc, Node* n, int* pos)
 
 Bytecode* compileNode(Arena* ar, Node* n)
 {
-    (void)ar;
     int total   = countInstr(n) + 1;
     Bytecode* bc = (Bytecode*)arena_alloc(ar, sizeof(Bytecode));
     bc->code     = (Instr*)arena_alloc(ar, sizeof(Instr) * total);
@@ -86,7 +85,7 @@ static bool runCompare(FactDB* db, Instr* i)
 
 bool runBytecode(FactDB* db, Bytecode* bc)
 {
-    bool stack[STACK_MAX];
+    bool stack[256];
     int sp = 0;
     for (int pc = 0; pc < bc->count; pc++)
     {

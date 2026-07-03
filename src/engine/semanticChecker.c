@@ -1,6 +1,6 @@
-#include "../../include/semanticChecker.h"
-#include "../../include/rule.h"
-#include "../../include/factdb_internal.h"
+#include "semanticChecker.h"
+#include "rule.h"
+#include "factdb_internal.h"
 
 // checks if the operator is valid
 bool isOperator(const char* op)

@@ -1,9 +1,9 @@
-#include "../../include/rule_internal.h"
-#include "../../include/bytecode.h"
+#include "rule_internal.h"
+#include "bytecode.h"
 
 #define VELABC_MAGIC    0x524C4542
 #define VELABC_VERSION  3
-#define MAX_RULE_NAME   64
+/* MAX_RULE_NAME inherited from rule.h via rule_internal.h */
 
 static uint32_t read_u32le(const uint8_t* buf)
 {
@@ -15,7 +15,7 @@ static uint32_t read_u32le(const uint8_t* buf)
 
 RuleEngine* loadBytecode(const char* file, FactDB* db)
 {
-    (void)db;
+    (void)db; /* facts not yet embeddable in bytecode format; db reserved for future use */
 
     FILE* fp = fopen(file, "rb");
     if (!fp)
@@ -113,6 +113,7 @@ RuleEngine* loadBytecode(const char* file, FactDB* db)
         }
         actionName[actionLen] = '\0';
 
+        uint32_t ruleInstrCount = instrCount;
         Bytecode* bc = arena_alloc(engine->arena, sizeof(Bytecode));
         if (!bc)
         {
@@ -121,7 +122,7 @@ RuleEngine* loadBytecode(const char* file, FactDB* db)
             deleteRuleEngine(engine);
             return NULL;
         }
-        bc->capacity = 8;
+        bc->capacity = ruleInstrCount;
         bc->count    = 0;
         bc->code     = arena_alloc(engine->arena, sizeof(Instr) * bc->capacity);
         if (!bc->code)
@@ -141,22 +142,6 @@ RuleEngine* loadBytecode(const char* file, FactDB* db)
                 fclose(fp);
                 deleteRuleEngine(engine);
                 return NULL;
-            }
-
-            if (bc->count >= bc->capacity)
-            {
-                int newCap   = bc->capacity * 2;
-                Instr* grown = arena_alloc(engine->arena, sizeof(Instr) * newCap);
-                if (!grown)
-                {
-                    fprintf(stderr, "Memory allocation failed for bytecode growth\n");
-                    fclose(fp);
-                    deleteRuleEngine(engine);
-                    return NULL;
-                }
-                memcpy(grown, bc->code, sizeof(Instr) * bc->count);
-                bc->code     = grown;
-                bc->capacity = newCap;
             }
 
             Instr* instr = &bc->code[bc->count++];
