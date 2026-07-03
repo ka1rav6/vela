@@ -29,5 +29,4 @@ typedef struct {
 Bytecode* compileNode(Arena*, Node*);
 bool runBytecode(FactDB*, Bytecode*);
 
-// debug + viewer function 
-void printByteCode(Bytecode*);
+
