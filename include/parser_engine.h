@@ -12,9 +12,9 @@ typedef enum {
 }FileType;
 
 
-yyjson_doc* parseJSON(const char*); 
+yyjson_doc* parseJSON(const char*);
 
-RuleEngine* build_ast(yyjson_doc*, FactDB*);
-RuleEngine* loadBytecode(const char* file, FactDB* db);
+RuleEngine* build_ast(yyjson_doc*, FactDB*, EngineError*);
+RuleEngine* loadBytecode(const char* file, FactDB* db, EngineError*);
 
 
