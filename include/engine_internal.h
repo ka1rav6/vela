@@ -9,5 +9,6 @@ struct Engine {
     RuleEngine *r_engine;
     const char* file;
     ActionEntry* action_registry;
+    EngineError last_error;
     pthread_mutex_t lock; /* protects action_registry against concurrent registerTheAction calls */
 };

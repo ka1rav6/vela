@@ -2,11 +2,10 @@
 #include "rule.h"
 #include "factdb_internal.h"
 
-// checks if the operator is valid
 bool isOperator(const char* op)
 {
-    const char* ops[9] = {">=", "<=","==", "!=", ">", "<", "and", "or", "not"};
-    for (int i = 0; i < 9; i++)
+    const char* ops[10] = {">=", "<=", "==", "!=", ">", "<", "and", "or", "not", "null"};
+    for (int i = 0; i < 10; i++)
     {
         if (strcmp(op, ops[i]) == 0)
             return true;
@@ -16,39 +15,31 @@ bool isOperator(const char* op)
 
 bool isComparisonCorrect(FactDB* db, const char* factname)
 {
-    // checking if factname [ a numfact ] is being compared to a bool [ bool fact ]
     return !factdb_has_bool(db, factname);
 }
-// checks if the fact exists in the database already
+
 bool factExists(FactDB* db, const char* fact, factType t)
 {
     switch (t)
-    { // hence it only has to search through one type
-        case BOOL:
-            return factdb_has_bool(db, fact);
-        case NUM:
-            return factdb_has_num(db, fact);
+    {
+        case BOOL: return factdb_has_bool(db, fact);
+        case NUM:  return factdb_has_num(db, fact);
+        case STR:  return factdb_has_str(db, fact);
     }
     return false;
 }
-// checks if the rule name already exists in the database ()
+
 bool duplicateRule(RuleEngine* e, const char* name)
 {
     return findRule(e, name) != NULL;
 }
 
-
-
-/*
- * checks if the array contains a mix of bool and num facts
- * usage : to check if by accident a user is comparing a bool fact to a num fact or vice versa
- * e.g. "fact1" > "fact2" where fact1 is a bool and fact2 is a num
-*/
-bool isMixedBoolNumArray(FactDB* db, yyjson_val* arr)
+bool isMixedBoolNumArray(FactDB* db, yyjson_val* arr, EngineError* err)
 {
     size_t len = yyjson_arr_size(arr);
     bool hasBool = false;
     bool hasNum  = false;
+    bool hasStr  = false;
 
     for (size_t i = 0; i < len; i++)
     {
@@ -56,25 +47,25 @@ bool isMixedBoolNumArray(FactDB* db, yyjson_val* arr)
         if (!yyjson_is_str(elem))
             continue;
         const char* name = yyjson_get_str(elem);
-        if (factExists(db, name, BOOL)) 
+        if (factExists(db, name, BOOL))
             hasBool = true;
-        if (factExists(db, name, NUM))  
+        if (factExists(db, name, NUM))
             hasNum  = true;
-        if (hasBool && hasNum)
+        if (factExists(db, name, STR))
+            hasStr  = true;
+        if ((hasBool && hasNum) || (hasBool && hasStr) || (hasNum && hasStr))
+        {
+            if (err) *err = ENGINE_ERR_BOOL_COMPARED;
             return true;
+        }
     }
     return false;
 }
 
-/*
- * checks if the array is empty or undersized
- * usage : to check if a user is trying to apply an operator to an insufficient number of operands
- * e.g. "not" operator applied to an empty array or an array with more than 1 element
-*/
 bool isEmptyOrUndersizedArray(yyjson_val* arr, const char* op)
 {
     size_t len = yyjson_arr_size(arr);
-    if (strcmp(op, "not") == 0)
+    if (strcmp(op, "not") == 0 || strcmp(op, "null") == 0)
         return len < 1;
     return len < 2;
 }

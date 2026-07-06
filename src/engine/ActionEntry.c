@@ -1,25 +1,18 @@
 #include "ActionEntry_internal.h"
 
-// registers the action in the registry
 int registerAction(ActionEntry** registry, const char* action, Action_f func, void* ctx)
 {
     if (strlen(action) > MAX_ACTION_NAME)
-    {
-        fprintf(stderr, "Cannot have an action name that exceeds the limit of %d letters: %s\n", MAX_ACTION_NAME, action);
         return -1;
-    }
     ActionEntry* e = malloc(sizeof(ActionEntry));
     if (!e)
-    {
-        fprintf(stderr, "Memory allocation failed for action entry\n");
-        return -1; // the error code
-    }
+        return -1;
     memset(e, 0, sizeof(ActionEntry));
     strncpy(e->action, action, MAX_ACTION_NAME - 1);
     e->action[MAX_ACTION_NAME - 1] = '\0';
     e->func = func;
     e->ctx  = ctx;
-    HASH_ADD_STR(*registry, action, e); // uthash macro to add the action to the registry hashmap
+    HASH_ADD_STR(*registry, action, e);
     return 0;
 }
 

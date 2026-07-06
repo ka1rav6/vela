@@ -10,26 +10,18 @@ static inline size_t align_up(size_t n, size_t alignment)
 char* ask_memory(size_t size)
 {
     void* ptr = mmap(NULL, size, PROT_READ | PROT_WRITE,
-                      MAP_PRIVATE | MAP_ANONYMOUS, -1, 0); // asking memory from the system
-                                                           
+                      MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
     if (ptr == MAP_FAILED)
-    {
-        fprintf(stderr, "Arena memory mapping failed\n");
         return NULL;
-    }
     return (char*)ptr;
 }
 
-// constructor for the arena of size "size"
 Arena* createArena(size_t size)
 {
-    assert(size != 0); // no point of allocating an arena of size 0
+    assert(size != 0);
     Arena* ar = (Arena*)malloc(sizeof(Arena));
     if (!ar)
-    {
-        fprintf(stderr, "Could not allocate Arena struct\n");
         return NULL;
-    }
     ar->start = ask_memory(size);
     if (!ar->start)
     {
@@ -40,28 +32,22 @@ Arena* createArena(size_t size)
     ar->size = size;
     if (pthread_mutex_init(&ar->lock, NULL) != 0)
     {
-        fprintf(stderr, "Could not initialize arena mutex\n");
-        munmap(ar->start, ar->size); // returning the memory back to system
+        munmap(ar->start, ar->size);
         free(ar);
-        ar = NULL;
         return NULL;
     }
     return ar;
 }
 
-// allocates memory of size "size" to the arena's memory.
-// Thread-safe: a per-arena mutex serializes access to the bump pointer ('used'),
-// since multiple threads may try to allocate from the same arena concurrently.
 void* arena_alloc(Arena* ar, size_t size)
 {
     if (!ar || size == 0) return NULL;
-    pthread_mutex_lock(&ar->lock); // lock starts now :
+    pthread_mutex_lock(&ar->lock);
 
     size_t aligned = align_up(ar->used, ARENA_ALIGNMENT);
     if (size > ar->size - aligned)
     {
         pthread_mutex_unlock(&ar->lock);
-        fprintf(stderr, "Arena out of memory: %zu bytes requested\n", size);
         return NULL;
     }
     void* loc = ar->start + aligned;
@@ -92,13 +78,10 @@ void arena_reset(Arena* ar)
     pthread_mutex_unlock(&ar->lock);
 }
 
-// destroys the arena and frees all the memory
 void destroyArena(Arena* ar)
 {
     if (!ar) return;
-    if (munmap(ar->start, ar->size) == -1) // returning the memory back and seeing if it has been returned successfully
-        fprintf(stderr, "munmap failed\n");
+    munmap(ar->start, ar->size);
     pthread_mutex_destroy(&ar->lock);
     free(ar);
-    ar = NULL;
 }

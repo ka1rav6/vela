@@ -7,6 +7,7 @@
 typedef enum {
     OP_PUSH_FACT,
     OP_PUSH_CMP,
+    OP_PUSH_STR_CMP,
     OP_AND,
     OP_OR,
     OP_NOT,
@@ -16,6 +17,7 @@ typedef enum {
 typedef struct {
     char* factName;
     double val;
+    char* strVal;
     OpCode op;
     CompareOp cmp;
 } Instr;

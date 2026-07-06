@@ -48,17 +48,12 @@ Rule* createRule(RuleEngine* e, Node* n, const char* action, const char* name, v
     return temp;
 }
 
-
-
-// simple rule engine constructor
 RuleEngine* createRuleEngine()
 {
     RuleEngine* temp = (RuleEngine*)malloc(sizeof(RuleEngine));
     if (!temp)
-    {
-        fprintf(stderr, "Could not allocate space for RuleEngine\n");
         return NULL;
-    }
+
     memset(temp, 0, sizeof(RuleEngine));
     temp->arena = createArena(RULE_ENGINE_ARENA_SIZE);
     if (!temp->arena)
@@ -68,7 +63,6 @@ RuleEngine* createRuleEngine()
     }
     if (pthread_mutex_init(&temp->lock, NULL) != 0)
     {
-        fprintf(stderr, "Could not initialize RuleEngine mutex\n");
         destroyArena(temp->arena);
         free(temp);
         return NULL;

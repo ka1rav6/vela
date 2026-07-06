@@ -38,6 +38,15 @@ void printAST(Node* n, int depth){
                 n->data.Compare.op,
                 n->data.Compare.val);
             break;
+        case NODE_STR_CMP:
+            printf("STR_CMP(%s op=%d val=%s)\n",
+                n->data.StrCmp.factName,
+                n->data.StrCmp.op,
+                n->data.StrCmp.strVal);
+            break;
+        case NODE_NULL:
+            printf("NULL\n");
+            break;
     }
 }
 
@@ -107,7 +116,7 @@ int main(void){
 
     Engine* e = createEngine("../test/test1.json", JSON);
     if (!e) {
-        fprintf(stderr, "Failed to create engine\n");
+        printf("Failed to create engine\n");
         return 1;
     }
     // --- rules that SHOULD fire ---
@@ -148,8 +157,9 @@ int main(void){
     rule_engine_for_each(engine_get_rule_engine(e), print_rule_visitor, NULL);
 
     printf("=== RUNNING ENGINE ===\n");
-    if (runEngine(e) != 0)
-        fprintf(stderr, "Engine run returned an error\n");
+    EngineError run_err = runEngine(e);
+    if (run_err != ENGINE_SUCCESS)
+        printf("Engine run error: %s\n", engine_strerror(run_err));
 
     printf("\n=== RESULTS ===\n");
     printf("  Expected to fire    : 24\n");

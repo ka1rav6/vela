@@ -17,13 +17,19 @@ typedef struct {
     bool val;
 } BoolFact;
 
+typedef struct {
+    UT_hash_handle hh;
+    char name[MAX_NAME];
+    char* val;
+} StrFact;
+
 struct FactDB {
     pthread_rwlock_t lock; /* readers (getX) share, writers (setX) exclusive */
     BoolFact* boolFacts;
     NumFact*  numFacts;
+    StrFact*  strFacts;
 };
 
-// Internal-only accessors needed by semanticChecker.c / parser_engine.c, which
-// need to inspect raw hash membership rather than just fact values.
 bool factdb_has_bool(FactDB* db, const char* name);
 bool factdb_has_num(FactDB* db, const char* name);
+bool factdb_has_str(FactDB* db, const char* name);

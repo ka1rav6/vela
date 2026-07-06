@@ -10,7 +10,9 @@ typedef enum {
     NODE_OR,
     NODE_NOT,
     NODE_FACT,
-    NODE_COMPARE
+    NODE_COMPARE,
+    NODE_NULL,
+    NODE_STR_CMP,
 } Type;
 
 typedef enum {
@@ -23,6 +25,7 @@ typedef struct Node {
         struct { struct Node* child; } unary;
         struct { char *factName; } Fact;
         struct { char *factName; double val; CompareOp op; } Compare;
+        struct { char *factName; char *strVal; CompareOp op; } StrCmp;
     } data;
     Type type;
 } Node;

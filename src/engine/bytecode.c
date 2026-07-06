@@ -14,6 +14,8 @@ static int countInstr(Node* n)
             return countInstr(n->data.unary.child) + 1;
         case NODE_FACT:
         case NODE_COMPARE:
+        case NODE_STR_CMP:
+        case NODE_NULL:
             return 1;
     }
     return 0;
@@ -49,6 +51,20 @@ static void compileWalk(Bytecode* bc, Node* n, int* pos)
                 .factName = n->data.Compare.factName,
                 .cmp      = n->data.Compare.op,
                 .val      = n->data.Compare.val,
+            };
+            break;
+        case NODE_STR_CMP:
+            bc->code[(*pos)++] = (Instr){
+                .op       = OP_PUSH_STR_CMP,
+                .factName = n->data.StrCmp.factName,
+                .cmp      = n->data.StrCmp.op,
+                .strVal   = n->data.StrCmp.strVal,
+            };
+            break;
+        case NODE_NULL:
+            bc->code[(*pos)++] = (Instr){
+                .op   = OP_PUSH_FACT,
+                .factName = NULL,
             };
             break;
     }
@@ -94,11 +110,27 @@ VMResult runBytecode(FactDB* db, Bytecode* bc)
         {
             case OP_PUSH_FACT:
                 if (sp >= STACK_MAX) return VM_ERROR;
-                stack[sp++] = getBoolFact(db, i->factName);
+                if (i->factName)
+                    stack[sp++] = getBoolFact(db, i->factName);
+                else
+                    stack[sp++] = false;
                 break;
             case OP_PUSH_CMP:
                 if (sp >= STACK_MAX) return VM_ERROR;
                 stack[sp++] = runCompare(db, i);
+                break;
+            case OP_PUSH_STR_CMP:
+                if (sp >= STACK_MAX) return VM_ERROR;
+                {
+                    char* val = getStringFact(db, i->factName);
+                    bool strEq = val && i->strVal && strcmp(val, i->strVal) == 0;
+                    if (i->cmp == OP_EQ)
+                        stack[sp++] = strEq;
+                    else if (i->cmp == OP_NE)
+                        stack[sp++] = !strEq;
+                    else
+                        return VM_ERROR;
+                }
                 break;
             case OP_AND:
                 if (sp < 2) return VM_ERROR;
