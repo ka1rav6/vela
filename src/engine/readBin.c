@@ -3,7 +3,6 @@
 
 #define VELABC_MAGIC    0x524C4542
 #define VELABC_VERSION  3
-/* MAX_RULE_NAME inherited from rule.h via rule_internal.h */
 
 static uint32_t read_u32le(const uint8_t* buf)
 {
@@ -13,14 +12,14 @@ static uint32_t read_u32le(const uint8_t* buf)
          | ((uint32_t)buf[3] << 24);
 }
 
-RuleEngine* loadBytecode(const char* file, FactDB* db)
+RuleEngine* loadBytecode(const char* file, FactDB* db, EngineError* err)
 {
     (void)db;
 
     FILE* fp = fopen(file, "rb");
     if (!fp)
     {
-        fprintf(stderr, "Could not open file: %s\n", file);
+        if (err) *err = ENGINE_ERR_CANT_OPEN_FILE;
         return NULL;
     }
 
@@ -30,7 +29,7 @@ RuleEngine* loadBytecode(const char* file, FactDB* db)
 
     if (fileSize < 16)
     {
-        fprintf(stderr, "File too small to be a valid .velabc file: %s\n", file);
+        if (err) *err = ENGINE_ERR_FILE_TOO_SMALL;
         fclose(fp);
         return NULL;
     }
@@ -38,7 +37,7 @@ RuleEngine* loadBytecode(const char* file, FactDB* db)
     uint8_t header[16];
     if (fread(header, 1, 16, fp) != 16)
     {
-        fprintf(stderr, "Could not read header from: %s\n", file);
+        if (err) *err = ENGINE_ERR_TRUNCATED_FILE;
         fclose(fp);
         return NULL;
     }
@@ -50,29 +49,25 @@ RuleEngine* loadBytecode(const char* file, FactDB* db)
 
     if (magic != VELABC_MAGIC)
     {
-        fprintf(stderr, "Invalid magic in %s (expected 0x%08X, got 0x%08X)\n",
-                file, VELABC_MAGIC, magic);
+        if (err) *err = ENGINE_ERR_INVALID_MAGIC;
         fclose(fp);
         return NULL;
     }
     if (version != VELABC_VERSION)
     {
-        fprintf(stderr, "Unsupported version %d in %s (expected %d)\n",
-                version, file, VELABC_VERSION);
+        if (err) *err = ENGINE_ERR_INVALID_VERSION;
         fclose(fp);
         return NULL;
     }
-
     if (ruleCount == 0 || ruleCount > MAX_RULES)
     {
-        fprintf(stderr, "Invalid rule count %u in %s\n", ruleCount, file);
+        if (err) *err = ENGINE_ERR_INVALID_RULE_COUNT;
         fclose(fp);
         return NULL;
     }
-
     if (instrCount == 0 || instrCount > 100000)
     {
-        fprintf(stderr, "Invalid instruction count %u in %s\n", instrCount, file);
+        if (err) *err = ENGINE_ERR_INVALID_INSTR_COUNT;
         fclose(fp);
         return NULL;
     }
@@ -80,6 +75,7 @@ RuleEngine* loadBytecode(const char* file, FactDB* db)
     RuleEngine* engine = createRuleEngine();
     if (!engine)
     {
+        if (err) *err = ENGINE_ERR_OUT_OF_MEMORY;
         fclose(fp);
         return NULL;
     }
@@ -89,14 +85,14 @@ RuleEngine* loadBytecode(const char* file, FactDB* db)
         uint8_t nameLen;
         if (fread(&nameLen, 1, 1, fp) != 1)
         {
-            fprintf(stderr, "Could not read rule name length\n");
+            if (err) *err = ENGINE_ERR_TRUNCATED_FILE;
             fclose(fp);
             deleteRuleEngine(engine);
             return NULL;
         }
         if (nameLen >= MAX_RULE_NAME)
         {
-            fprintf(stderr, "Rule name too long (%u bytes)\n", nameLen);
+            if (err) *err = ENGINE_ERR_RULE_NAME_TOO_LONG;
             fclose(fp);
             deleteRuleEngine(engine);
             return NULL;
@@ -105,7 +101,7 @@ RuleEngine* loadBytecode(const char* file, FactDB* db)
         char ruleName[MAX_RULE_NAME];
         if (nameLen > 0 && fread(ruleName, 1, nameLen, fp) != nameLen)
         {
-            fprintf(stderr, "Could not read rule name\n");
+            if (err) *err = ENGINE_ERR_TRUNCATED_FILE;
             fclose(fp);
             deleteRuleEngine(engine);
             return NULL;
@@ -115,14 +111,14 @@ RuleEngine* loadBytecode(const char* file, FactDB* db)
         uint8_t actionLen;
         if (fread(&actionLen, 1, 1, fp) != 1)
         {
-            fprintf(stderr, "Could not read action name length for rule: %s\n", ruleName);
+            if (err) *err = ENGINE_ERR_TRUNCATED_FILE;
             fclose(fp);
             deleteRuleEngine(engine);
             return NULL;
         }
         if (actionLen >= MAX_RULE_NAME)
         {
-            fprintf(stderr, "Action name too long (%u bytes) for rule: %s\n", actionLen, ruleName);
+            if (err) *err = ENGINE_ERR_ACTION_NAME_TOO_LONG;
             fclose(fp);
             deleteRuleEngine(engine);
             return NULL;
@@ -131,7 +127,7 @@ RuleEngine* loadBytecode(const char* file, FactDB* db)
         char actionName[MAX_RULE_NAME];
         if (actionLen > 0 && fread(actionName, 1, actionLen, fp) != actionLen)
         {
-            fprintf(stderr, "Could not read action name for rule: %s\n", ruleName);
+            if (err) *err = ENGINE_ERR_TRUNCATED_FILE;
             fclose(fp);
             deleteRuleEngine(engine);
             return NULL;
@@ -145,7 +141,7 @@ RuleEngine* loadBytecode(const char* file, FactDB* db)
             uint8_t opcode;
             if (fread(&opcode, 1, 1, fp) != 1)
             {
-                fprintf(stderr, "Unexpected EOF while counting instructions for rule: %s\n", ruleName);
+                if (err) *err = ENGINE_ERR_TRUNCATED_FILE;
                 fclose(fp);
                 deleteRuleEngine(engine);
                 return NULL;
@@ -153,17 +149,29 @@ RuleEngine* loadBytecode(const char* file, FactDB* db)
             ruleInstrCount++;
             if (opcode == OP_HALT)
                 break;
-            if (opcode == OP_PUSH_FACT || opcode == OP_PUSH_CMP)
+            if (opcode == OP_PUSH_FACT || opcode == OP_PUSH_CMP || opcode == OP_PUSH_STR_CMP)
             {
                 uint8_t cmp;
-                if (fread(&cmp, 1, 1, fp) != 1) { fclose(fp); deleteRuleEngine(engine); return NULL; }
+                if (fread(&cmp, 1, 1, fp) != 1) { if (err) *err = ENGINE_ERR_TRUNCATED_FILE; fclose(fp); deleteRuleEngine(engine); return NULL; }
                 while (1)
                 {
                     char ch;
-                    if (fread(&ch, 1, 1, fp) != 1) { fclose(fp); deleteRuleEngine(engine); return NULL; }
+                    if (fread(&ch, 1, 1, fp) != 1) { if (err) *err = ENGINE_ERR_TRUNCATED_FILE; fclose(fp); deleteRuleEngine(engine); return NULL; }
                     if (ch == '\0') break;
                 }
-                if (fseek(fp, 8, SEEK_CUR) != 0) { fclose(fp); deleteRuleEngine(engine); return NULL; }
+                if (opcode == OP_PUSH_STR_CMP)
+                {
+                    while (1)
+                    {
+                        char ch;
+                        if (fread(&ch, 1, 1, fp) != 1) { if (err) *err = ENGINE_ERR_TRUNCATED_FILE; fclose(fp); deleteRuleEngine(engine); return NULL; }
+                        if (ch == '\0') break;
+                    }
+                }
+                else
+                {
+                    if (fseek(fp, 8, SEEK_CUR) != 0) { if (err) *err = ENGINE_ERR_TRUNCATED_FILE; fclose(fp); deleteRuleEngine(engine); return NULL; }
+                }
             }
         }
         fseek(fp, ruleStart, SEEK_SET);
@@ -171,7 +179,7 @@ RuleEngine* loadBytecode(const char* file, FactDB* db)
         Bytecode* bc = arena_alloc(engine->arena, sizeof(Bytecode));
         if (!bc)
         {
-            fprintf(stderr, "Memory allocation failed for bytecode\n");
+            if (err) *err = ENGINE_ERR_ARENA_OOM;
             fclose(fp);
             deleteRuleEngine(engine);
             return NULL;
@@ -181,7 +189,7 @@ RuleEngine* loadBytecode(const char* file, FactDB* db)
         bc->code     = arena_alloc(engine->arena, sizeof(Instr) * bc->capacity);
         if (!bc->code)
         {
-            fprintf(stderr, "Memory allocation failed for bytecode instructions\n");
+            if (err) *err = ENGINE_ERR_ARENA_OOM;
             fclose(fp);
             deleteRuleEngine(engine);
             return NULL;
@@ -192,7 +200,7 @@ RuleEngine* loadBytecode(const char* file, FactDB* db)
             uint8_t opcode;
             if (fread(&opcode, 1, 1, fp) != 1)
             {
-                fprintf(stderr, "Unexpected EOF while reading instructions\n");
+                if (err) *err = ENGINE_ERR_TRUNCATED_FILE;
                 fclose(fp);
                 deleteRuleEngine(engine);
                 return NULL;
@@ -205,12 +213,12 @@ RuleEngine* loadBytecode(const char* file, FactDB* db)
             if (opcode == OP_HALT)
                 break;
 
-            if (opcode == OP_PUSH_FACT || opcode == OP_PUSH_CMP)
+            if (opcode == OP_PUSH_FACT || opcode == OP_PUSH_CMP || opcode == OP_PUSH_STR_CMP)
             {
                 uint8_t cmp;
                 if (fread(&cmp, 1, 1, fp) != 1)
                 {
-                    fprintf(stderr, "Could not read compare op\n");
+                    if (err) *err = ENGINE_ERR_TRUNCATED_FILE;
                     fclose(fp);
                     deleteRuleEngine(engine);
                     return NULL;
@@ -224,7 +232,7 @@ RuleEngine* loadBytecode(const char* file, FactDB* db)
                     char ch;
                     if (fread(&ch, 1, 1, fp) != 1)
                     {
-                        fprintf(stderr, "Could not read fact name\n");
+                        if (err) *err = ENGINE_ERR_TRUNCATED_FILE;
                         fclose(fp);
                         deleteRuleEngine(engine);
                         return NULL;
@@ -233,7 +241,7 @@ RuleEngine* loadBytecode(const char* file, FactDB* db)
                         break;
                     if (i >= sizeof(nameBuf) - 1)
                     {
-                        fprintf(stderr, "Fact name too long\n");
+                        if (err) *err = ENGINE_ERR_FACT_NAME_TOO_LONG;
                         fclose(fp);
                         deleteRuleEngine(engine);
                         return NULL;
@@ -243,21 +251,53 @@ RuleEngine* loadBytecode(const char* file, FactDB* db)
                 nameBuf[i] = '\0';
                 instr->factName = arena_strdup(engine->arena, nameBuf);
 
-                uint8_t valBytes[8];
-                if (fread(valBytes, 1, 8, fp) != 8)
+                if (opcode == OP_PUSH_STR_CMP)
                 {
-                    fprintf(stderr, "Could not read double value\n");
-                    fclose(fp);
-                    deleteRuleEngine(engine);
-                    return NULL;
+                    char strBuf[512];
+                    size_t j = 0;
+                    while (1)
+                    {
+                        char ch;
+                        if (fread(&ch, 1, 1, fp) != 1)
+                        {
+                            if (err) *err = ENGINE_ERR_TRUNCATED_FILE;
+                            fclose(fp);
+                            deleteRuleEngine(engine);
+                            return NULL;
+                        }
+                        if (ch == '\0')
+                            break;
+                        if (j >= sizeof(strBuf) - 1)
+                        {
+                            if (err) *err = ENGINE_ERR_FACT_NAME_TOO_LONG;
+                            fclose(fp);
+                            deleteRuleEngine(engine);
+                            return NULL;
+                        }
+                        strBuf[j++] = ch;
+                    }
+                    strBuf[j] = '\0';
+                    instr->strVal = arena_strdup(engine->arena, strBuf);
+                    instr->val = 0.0;
                 }
-                memcpy(&instr->val, valBytes, sizeof(double));
+                else
+                {
+                    uint8_t valBytes[8];
+                    if (fread(valBytes, 1, 8, fp) != 8)
+                    {
+                        if (err) *err = ENGINE_ERR_TRUNCATED_FILE;
+                        fclose(fp);
+                        deleteRuleEngine(engine);
+                        return NULL;
+                    }
+                    memcpy(&instr->val, valBytes, sizeof(double));
+                }
             }
         }
 
         if ((uint32_t)bc->count != ruleInstrCount)
         {
-            fprintf(stderr, "Instruction count mismatch for rule '%s'\n", ruleName);
+            if (err) *err = ENGINE_ERR_INSTRUCTION_COUNT_MISMATCH;
             fclose(fp);
             deleteRuleEngine(engine);
             return NULL;
@@ -266,7 +306,7 @@ RuleEngine* loadBytecode(const char* file, FactDB* db)
         Rule* rule = arena_alloc(engine->arena, sizeof(Rule));
         if (!rule)
         {
-            fprintf(stderr, "Memory allocation failed for rule\n");
+            if (err) *err = ENGINE_ERR_ARENA_OOM;
             fclose(fp);
             deleteRuleEngine(engine);
             return NULL;
@@ -290,8 +330,7 @@ RuleEngine* loadBytecode(const char* file, FactDB* db)
     }
     if (readInstrs != instrCount)
     {
-        fprintf(stderr, "Instruction count mismatch: header says %u, read %u\n",
-                instrCount, readInstrs);
+        if (err) *err = ENGINE_ERR_INSTRUCTION_COUNT_MISMATCH;
         deleteRuleEngine(engine);
         return NULL;
     }
