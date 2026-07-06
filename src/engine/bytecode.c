@@ -83,9 +83,9 @@ static bool runCompare(FactDB* db, Instr* i)
     return false;
 }
 
-bool runBytecode(FactDB* db, Bytecode* bc)
+VMResult runBytecode(FactDB* db, Bytecode* bc)
 {
-    bool stack[256];
+    bool stack[STACK_MAX];
     int sp = 0;
     for (int pc = 0; pc < bc->count; pc++)
     {
@@ -93,31 +93,31 @@ bool runBytecode(FactDB* db, Bytecode* bc)
         switch (i->op)
         {
             case OP_PUSH_FACT:
-                if (sp >= STACK_MAX) return false;
+                if (sp >= STACK_MAX) return VM_ERROR;
                 stack[sp++] = getBoolFact(db, i->factName);
                 break;
             case OP_PUSH_CMP:
-                if (sp >= STACK_MAX) return false;
+                if (sp >= STACK_MAX) return VM_ERROR;
                 stack[sp++] = runCompare(db, i);
                 break;
             case OP_AND:
-                if (sp < 2) return false;
+                if (sp < 2) return VM_ERROR;
                 stack[sp - 2] = stack[sp - 2] && stack[sp - 1];
                 sp--;
                 break;
             case OP_OR:
-                if (sp < 2) return false;
+                if (sp < 2) return VM_ERROR;
                 stack[sp - 2] = stack[sp - 2] || stack[sp - 1];
                 sp--;
                 break;
             case OP_NOT:
-                if (sp < 1) return false;
+                if (sp < 1) return VM_ERROR;
                 stack[sp - 1] = !stack[sp - 1];
                 break;
             case OP_HALT:
-                if (sp < 1) return false;
-                return stack[sp - 1];
+                if (sp < 1) return VM_ERROR;
+                return stack[sp - 1] ? VM_TRUE : VM_FALSE;
         }
     }
-    return false;
+    return VM_ERROR;
 }

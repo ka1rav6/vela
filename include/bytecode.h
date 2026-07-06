@@ -26,7 +26,13 @@ typedef struct {
     int capacity;
 } Bytecode;
 
+typedef enum {
+    VM_FALSE = 0,
+    VM_TRUE  = 1,
+    VM_ERROR = -1
+} VMResult;
+
 Bytecode* compileNode(Arena*, Node*);
-bool runBytecode(FactDB*, Bytecode*);
+VMResult runBytecode(FactDB*, Bytecode*);
 
 

@@ -14,7 +14,7 @@ typedef enum {
 
 yyjson_doc* parseJSON(const char*); 
 
-RuleEngine* build_ast(yyjson_doc*, FactDB*, ActionEntry*);
+RuleEngine* build_ast(yyjson_doc*, FactDB*);
 RuleEngine* loadBytecode(const char* file, FactDB* db);
 
 

@@ -6,7 +6,6 @@
 // ----------- ACTUAL FUNCTIONS -------------//
 
 
-// runs the rule engine and triggers the required action
 void runRuleEngine(RuleEngine* e, FactDB* db)
 {
     printf("=== RUNNING RULE ENGINE ===\n");
@@ -14,21 +13,26 @@ void runRuleEngine(RuleEngine* e, FactDB* db)
     Rule *cr, *tmp;
     HASH_ITER(hh, e->rules, cr, tmp)
     {
-        // runBytecode does the whole eval process
-        if (runBytecode(db, cr->bc))
-        { // returns true only if OP_HALT instruction is present at the end.
+        VMResult result = runBytecode(db, cr->bc);
+        if (result == VM_ERROR)
+        {
+            fprintf(stderr, "VM error evaluating rule: %s\n", cr->ruleName);
+        }
+        else if (result == VM_TRUE)
+        {
             if (cr->func)
-            {            // if the current rule has a function assigned to it
+            {
                 cr->func(db, cr->ctx);
-                printf("Action Triggered: %s\n", cr->action); // Will be removed in production
+                printf("Action Triggered: %s\n", cr->action);
             }
-            else{
+            else
+            {
                 printf("As no function is linked, no action was triggered"
                         ". The action that should have been triggered was : %s\n", cr->action);
             }
         }
     }
-    pthread_mutex_unlock(&e->lock); 
+    pthread_mutex_unlock(&e->lock);
 }
 
 // simple rule constructor
@@ -72,15 +76,10 @@ RuleEngine* createRuleEngine()
     return temp;
 }
 
-// simple rule engine destructor : arena is also destroyed here
 void deleteRuleEngine(RuleEngine* RE)
 {
     if (!RE) return;
-    Rule *current_rule, *tmp;
-    HASH_ITER(hh, RE->rules, current_rule, tmp)
-    { // iterates through all rules
-        HASH_DEL(RE->rules, current_rule);
-    }
+    HASH_CLEAR(hh, RE->rules);
     destroyArena(RE->arena);
     pthread_mutex_destroy(&RE->lock);
     free(RE);

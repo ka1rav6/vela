@@ -34,13 +34,14 @@ Engine* createEngine(const char* file, FileType type)
             free(temp);
             return NULL;
         }
-        temp->r_engine = build_ast(doc, temp->db, temp->action_registry);
+        temp->r_engine = build_ast(doc, temp->db);
     } else {
         temp->r_engine = loadBytecode(file, temp->db);
     }
     if (!temp->r_engine)
     {
         deleteFactDB(temp->db);
+        temp->db = NULL;
         free(temp);
         return NULL;
     }
@@ -89,10 +90,10 @@ int runEngine(Engine* e)
 FactDB* engine_get_factdb(Engine* e)
 {
     assert(e != NULL);
-    return e ? e->db : NULL;
+    return e->db;
 }
 RuleEngine* engine_get_rule_engine(Engine* e)
 {
     assert(e != NULL);
-    return e ? e->r_engine : NULL;
+    return e->r_engine;
 }

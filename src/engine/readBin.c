@@ -15,12 +15,23 @@ static uint32_t read_u32le(const uint8_t* buf)
 
 RuleEngine* loadBytecode(const char* file, FactDB* db)
 {
-    (void)db; /* facts not yet embeddable in bytecode format; db reserved for future use */
+    (void)db;
 
     FILE* fp = fopen(file, "rb");
     if (!fp)
     {
         fprintf(stderr, "Could not open file: %s\n", file);
+        return NULL;
+    }
+
+    fseek(fp, 0, SEEK_END);
+    long fileSize = ftell(fp);
+    rewind(fp);
+
+    if (fileSize < 16)
+    {
+        fprintf(stderr, "File too small to be a valid .velabc file: %s\n", file);
+        fclose(fp);
         return NULL;
     }
 
@@ -48,6 +59,20 @@ RuleEngine* loadBytecode(const char* file, FactDB* db)
     {
         fprintf(stderr, "Unsupported version %d in %s (expected %d)\n",
                 version, file, VELABC_VERSION);
+        fclose(fp);
+        return NULL;
+    }
+
+    if (ruleCount == 0 || ruleCount > MAX_RULES)
+    {
+        fprintf(stderr, "Invalid rule count %u in %s\n", ruleCount, file);
+        fclose(fp);
+        return NULL;
+    }
+
+    if (instrCount == 0 || instrCount > 100000)
+    {
+        fprintf(stderr, "Invalid instruction count %u in %s\n", instrCount, file);
         fclose(fp);
         return NULL;
     }
@@ -113,7 +138,36 @@ RuleEngine* loadBytecode(const char* file, FactDB* db)
         }
         actionName[actionLen] = '\0';
 
-        uint32_t ruleInstrCount = instrCount;
+        long ruleStart = ftell(fp);
+        uint32_t ruleInstrCount = 0;
+        while (1)
+        {
+            uint8_t opcode;
+            if (fread(&opcode, 1, 1, fp) != 1)
+            {
+                fprintf(stderr, "Unexpected EOF while counting instructions for rule: %s\n", ruleName);
+                fclose(fp);
+                deleteRuleEngine(engine);
+                return NULL;
+            }
+            ruleInstrCount++;
+            if (opcode == OP_HALT)
+                break;
+            if (opcode == OP_PUSH_FACT || opcode == OP_PUSH_CMP)
+            {
+                uint8_t cmp;
+                if (fread(&cmp, 1, 1, fp) != 1) { fclose(fp); deleteRuleEngine(engine); return NULL; }
+                while (1)
+                {
+                    char ch;
+                    if (fread(&ch, 1, 1, fp) != 1) { fclose(fp); deleteRuleEngine(engine); return NULL; }
+                    if (ch == '\0') break;
+                }
+                if (fseek(fp, 8, SEEK_CUR) != 0) { fclose(fp); deleteRuleEngine(engine); return NULL; }
+            }
+        }
+        fseek(fp, ruleStart, SEEK_SET);
+
         Bytecode* bc = arena_alloc(engine->arena, sizeof(Bytecode));
         if (!bc)
         {
@@ -201,6 +255,14 @@ RuleEngine* loadBytecode(const char* file, FactDB* db)
             }
         }
 
+        if ((uint32_t)bc->count != ruleInstrCount)
+        {
+            fprintf(stderr, "Instruction count mismatch for rule '%s'\n", ruleName);
+            fclose(fp);
+            deleteRuleEngine(engine);
+            return NULL;
+        }
+
         Rule* rule = arena_alloc(engine->arena, sizeof(Rule));
         if (!rule)
         {
@@ -210,7 +272,8 @@ RuleEngine* loadBytecode(const char* file, FactDB* db)
             return NULL;
         }
         memset(rule, 0, sizeof(Rule));
-        strcpy(rule->ruleName, ruleName);
+        strncpy(rule->ruleName, ruleName, MAX_RULE_NAME - 1);
+        rule->ruleName[MAX_RULE_NAME - 1] = '\0';
         rule->action    = arena_strdup(engine->arena, actionName);
         rule->bc        = bc;
         rule->condition = NULL;

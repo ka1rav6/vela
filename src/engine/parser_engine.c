@@ -2,6 +2,7 @@
 #include "parser_engine.h"
 #include "semanticChecker.h"
 #include "bytecode.h"
+#include <yyjson.h>
 
 static Node* build_node(Arena*, FactDB*, yyjson_val*);
 static Node* build_and_or(Arena*, FactDB*, yyjson_val*, Type);
@@ -42,7 +43,7 @@ yyjson_doc* parseJSON(const char * file)
 // the main AST (rule engine is built here) parses the json doc and 
 // calls a function to build the fact database (hence passed as reference) 
 // and creates the rule and adds it to the engine
-RuleEngine* build_ast(yyjson_doc* doc, FactDB* db, ActionEntry* g_registry)
+RuleEngine* build_ast(yyjson_doc* doc, FactDB* db)
 {
     yyjson_val* root = yyjson_doc_get_root(doc);
     
@@ -90,15 +91,9 @@ RuleEngine* build_ast(yyjson_doc* doc, FactDB* db, ActionEntry* g_registry)
             return NULL;
         }
         memset(r, 0, sizeof(Rule));
-        strcpy(r->ruleName, yyjson_get_str(name));
+        strncpy(r->ruleName, yyjson_get_str(name), MAX_RULE_NAME - 1);
+        r->ruleName[MAX_RULE_NAME - 1] = '\0';
         r->action = arena_strdup(engine->arena, yyjson_get_str(action));
-        
-        ActionEntry* ae = lookupAction(g_registry, r->action);
-        if (ae)
-        {
-            r->func = action_entry_func(ae);
-            r->ctx  = action_entry_ctx(ae);
-        }
         r->condition = build_node(engine->arena, db, cond);
         if (!r->condition)
         {
@@ -177,29 +172,36 @@ static Node* build_fact(Arena* ar, FactDB* db, yyjson_val* v)
 // (e.g. comparing a bool fact with a number is not valid)    
 static Node* build_compare(Arena* ar, FactDB* db, const char* op, yyjson_val* arr)
 {
-    Node* n = createNode(ar, NODE_COMPARE); // Pass ar
+    Node* n = createNode(ar, NODE_COMPARE);
     if (!n) return NULL;
-    n->data.Compare.val = NAN;  
+    n->data.Compare.val = 0.0;
 
-    yyjson_val* left  = yyjson_arr_get(arr, 0);  // LHS of comparison
-    yyjson_val* right = yyjson_arr_get(arr, 1); // RHS of comparison
+    yyjson_val* left  = yyjson_arr_get(arr, 0);
+    yyjson_val* right = yyjson_arr_get(arr, 1);
 
-    n->data.Compare.factName = arena_strdup(ar, yyjson_get_str(left)); // string is duplicated and stored in the arena itself
+    n->data.Compare.factName = arena_strdup(ar, yyjson_get_str(left));
 
     if (!isComparisonCorrect(db, n->data.Compare.factName))
-    { // defined in semanticChecker.c 
+    {
         fprintf(stderr, "Incorrect: Tried comparing bool with number: %s\n", n->data.Compare.factName);
         return NULL;
     }
 
-    if (yyjson_is_int(right))  // => right is an int
-        n->data.Compare.val  = (double)yyjson_get_int(right);
-    if (yyjson_is_real(right)) // => right is double
-         n->data.Compare.val = (double)yyjson_get_real(right);
-
-    if (isnan(n->data.Compare.val))
+    bool valSet = false;
+    if (yyjson_is_int(right))
     {
-        fprintf(stderr, "Invalid comparison value (NAN) for fact '%s'\n", n->data.Compare.factName);
+        n->data.Compare.val = (double)yyjson_get_int(right);
+        valSet = true;
+    }
+    if (yyjson_is_real(right))
+    {
+        n->data.Compare.val = yyjson_get_real(right);
+        valSet = true;
+    }
+
+    if (!valSet)
+    {
+        fprintf(stderr, "Invalid comparison value for fact '%s'\n", n->data.Compare.factName);
         return NULL;
     }
     // assigning appropriate enum according to symbol
