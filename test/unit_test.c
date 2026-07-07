@@ -760,6 +760,81 @@ SUITE(vm_suite)
 }
 
 
+//----------------- ACTIONENTRY SUITE-------------------//
+
+static int action_called_count;
+static void* action_called_ctx;
+
+static void test_action_fn(FactDB* db, void* ctx)
+{
+    (void)db;
+    action_called_count++;
+    action_called_ctx = ctx;
+}
+
+TEST action_register_lookup(void)
+{
+    ActionEntry* reg = NULL;
+    ASSERT_EQ(0, registerAction(&reg, "my_action", test_action_fn, (void*)0x42));
+    ASSERT(reg);
+
+    ActionEntry* e = lookupAction(reg, "my_action");
+    ASSERT(e);
+    ASSERT_STR_EQ("my_action", e->action);
+    ASSERT_EQ(test_action_fn, e->func);
+    ASSERT_EQ((void*)0x42, e->ctx);
+
+    freeRegistry(&reg);
+    ASSERT_FALSE(reg);
+    PASS();
+}
+
+TEST action_accessor_func(void)
+{
+    ActionEntry* reg = NULL;
+    registerAction(&reg, "act", test_action_fn, (void*)0x99);
+    ActionEntry* e = lookupAction(reg, "act");
+    ASSERT_EQ(test_action_fn, action_entry_func(e));
+    ASSERT_EQ((void*)0x99, action_entry_ctx(e));
+    freeRegistry(&reg);
+    PASS();
+}
+
+TEST action_accessor_null(void)
+{
+    ASSERT_FALSE(action_entry_func(NULL));
+    ASSERT_FALSE(action_entry_ctx(NULL));
+    PASS();
+}
+
+TEST action_lookup_missing(void)
+{
+    ActionEntry* reg = NULL;
+    registerAction(&reg, "existing", test_action_fn, NULL);
+    ASSERT_FALSE(lookupAction(reg, "nonexistent"));
+    freeRegistry(&reg);
+    PASS();
+}
+
+TEST action_name_too_long(void)
+{
+    ActionEntry* reg = NULL;
+    char longname[MAX_ACTION_NAME + 2];
+    memset(longname, 'A', sizeof(longname) - 1);
+    longname[sizeof(longname) - 1] = '\0';
+    ASSERT_EQ(-1, registerAction(&reg, longname, test_action_fn, NULL));
+    freeRegistry(&reg);
+    PASS();
+}
+
+SUITE(action_suite)
+{
+    RUN_TEST(action_register_lookup);
+    RUN_TEST(action_accessor_func);
+    RUN_TEST(action_accessor_null);
+    RUN_TEST(action_lookup_missing);
+    RUN_TEST(action_name_too_long);
+}
 
 
 
@@ -777,5 +852,6 @@ int main(int argc, char** argv)
     RUN_SUITE(arena_suite);
     RUN_SUITE(factdb_suite);
     RUN_SUITE(vm_suite);
+    RUN_SUITE(action_suite);
     GREATEST_MAIN_END;
 }
