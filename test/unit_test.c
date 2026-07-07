@@ -836,9 +836,209 @@ SUITE(action_suite)
     RUN_TEST(action_name_too_long);
 }
 
+//----------------SEMANTIC CHECKER SUITE----------------//
 
+TEST sem_is_operator(void)
+{
+    ASSERT(isOperator(">="));
+    ASSERT(isOperator("<="));
+    ASSERT(isOperator("=="));
+    ASSERT(isOperator("!="));
+    ASSERT(isOperator(">"));
+    ASSERT(isOperator("<"));
+    ASSERT(isOperator("and"));
+    ASSERT(isOperator("or"));
+    ASSERT(isOperator("not"));
+    ASSERT(isOperator("null"));
+    ASSERT_FALSE(isOperator("xor"));
+    ASSERT_FALSE(isOperator("&&"));
+    ASSERT_FALSE(isOperator(""));
+    PASS();
+}
 
+TEST sem_is_comparison_correct(void)
+{
+    FactDB* db = createFactDB();
+    setBoolFact(db, "flag", true);
+    setNumFact(db, "age", 25);
+    ASSERT_FALSE(isComparisonCorrect(db, "flag"));
+    ASSERT(isComparisonCorrect(db, "age"));
+    ASSERT(isComparisonCorrect(db, "nonexistent"));
+    deleteFactDB(db);
+    PASS();
+}
 
+TEST sem_fact_exists(void)
+{
+    FactDB* db = createFactDB();
+    setBoolFact(db, "b", true);
+    setNumFact(db, "n", 1.0);
+    setStringFact(db, "s", "x");
+    ASSERT(factExists(db, "b", BOOL));
+    ASSERT_FALSE(factExists(db, "b", NUM));
+    ASSERT_FALSE(factExists(db, "b", STR));
+    ASSERT(factExists(db, "n", NUM));
+    ASSERT(factExists(db, "s", STR));
+    ASSERT_FALSE(factExists(db, "z", BOOL));
+    deleteFactDB(db);
+    PASS();
+}
+
+TEST sem_duplicate_rule(void)
+{
+    RuleEngine* re = createRuleEngine();
+    ASSERT(re);
+    Arena* a = re->arena;
+    ASSERT_FALSE(duplicateRule(re, "r1"));
+
+    Node* n = createNode(a, NODE_FACT);
+    n->data.Fact.factName = arena_strdup(a, "true_fact");
+    Rule* r = createRule(re, n, "A", "r1", NULL);
+    addRule(re, r);
+
+    ASSERT(duplicateRule(re, "r1"));
+    ASSERT_FALSE(duplicateRule(re, "r2"));
+    ASSERT_FALSE(duplicateRule(re, "R1"));
+
+    deleteRuleEngine(re);
+    PASS();
+}
+
+TEST sem_is_empty_array(void)
+{
+    yyjson_doc* doc = yyjson_read("[1, 2]", strlen("[1, 2]"), 0);
+    yyjson_val* arr = yyjson_doc_get_root(doc);
+    ASSERT_FALSE(isEmptyOrUndersizedArray(arr, "and"));
+
+    yyjson_doc* emptyDoc = yyjson_read("[]", strlen("[]"), 0);
+    yyjson_val* emptyArr = yyjson_doc_get_root(emptyDoc);
+    ASSERT(isEmptyOrUndersizedArray(emptyArr, "and"));
+
+    yyjson_doc* singleDoc = yyjson_read("[42]", strlen("[42]"), 0);
+    yyjson_val* singleArr = yyjson_doc_get_root(singleDoc);
+    ASSERT(isEmptyOrUndersizedArray(singleArr, "and"));
+    ASSERT_FALSE(isEmptyOrUndersizedArray(singleArr, "not"));
+
+    yyjson_doc_free(doc);
+    yyjson_doc_free(emptyDoc);
+    yyjson_doc_free(singleDoc);
+    PASS();
+}
+
+TEST sem_is_mixed_types(void)
+{
+    FactDB* db = createFactDB();
+    setBoolFact(db, "b", true);
+    setNumFact(db, "n", 1.0);
+
+    yyjson_doc* doc = yyjson_read("[\"b\", \"n\"]", strlen("[\"b\", \"n\"]"), 0);
+    yyjson_val* arr = yyjson_doc_get_root(doc);
+    EngineError err = ENGINE_SUCCESS;
+    ASSERT(isMixedBoolNumArray(db, arr, &err));
+    ASSERT_EQ(ENGINE_ERR_BOOL_COMPARED, err);
+
+    yyjson_doc_free(doc);
+    deleteFactDB(db);
+    PASS();
+}
+
+TEST sem_is_mixed_same_type_ok(void)
+{
+    FactDB* db = createFactDB();
+    setBoolFact(db, "b1", true);
+    setBoolFact(db, "b2", false);
+
+    yyjson_doc* doc = yyjson_read("[\"b1\", \"b2\"]", strlen("[\"b1\", \"b2\"]"), 0);
+    yyjson_val* arr = yyjson_doc_get_root(doc);
+    ASSERT_FALSE(isMixedBoolNumArray(db, arr, NULL));
+
+    yyjson_doc_free(doc);
+    deleteFactDB(db);
+    PASS();
+}
+
+TEST sem_is_mixed_null_err(void)
+{
+    FactDB* db = createFactDB();
+    yyjson_doc* doc = yyjson_read("[\"x\", \"y\"]", strlen("[\"x\", \"y\"]"), 0);
+    yyjson_val* arr = yyjson_doc_get_root(doc);
+    ASSERT_FALSE(isMixedBoolNumArray(db, arr, NULL));
+    yyjson_doc_free(doc);
+    deleteFactDB(db);
+    PASS();
+}
+
+SUITE(semantic_suite)
+{
+    RUN_TEST(sem_is_operator);
+    RUN_TEST(sem_is_comparison_correct);
+    RUN_TEST(sem_fact_exists);
+    RUN_TEST(sem_duplicate_rule);
+    RUN_TEST(sem_is_empty_array);
+    RUN_TEST(sem_is_mixed_types);
+    RUN_TEST(sem_is_mixed_same_type_ok);
+    RUN_TEST(sem_is_mixed_null_err);
+}
+
+//--------------ENGINE INTEGRATION SUITE --------------//
+
+TEST engine_strerror_all_codes(void)
+{
+    ASSERT_STR_EQ("success", engine_strerror(ENGINE_SUCCESS));
+    ASSERT_STR_EQ("null argument", engine_strerror(ENGINE_ERR_NULL_ARG));
+    ASSERT_STR_EQ("cannot open file", engine_strerror(ENGINE_ERR_CANT_OPEN_FILE));
+    ASSERT_STR_EQ("file too small", engine_strerror(ENGINE_ERR_FILE_TOO_SMALL));
+    ASSERT_STR_EQ("invalid JSON", engine_strerror(ENGINE_ERR_INVALID_JSON));
+    ASSERT_STR_EQ("out of memory", engine_strerror(ENGINE_ERR_OUT_OF_MEMORY));
+    ASSERT_STR_EQ("arena out of memory", engine_strerror(ENGINE_ERR_ARENA_OOM));
+    ASSERT_STR_EQ("mmap failed", engine_strerror(ENGINE_ERR_MMAP));
+    ASSERT_STR_EQ("munmap failed", engine_strerror(ENGINE_ERR_MUNMAP));
+    ASSERT_STR_EQ("mutex init failed", engine_strerror(ENGINE_ERR_MUTEX));
+    ASSERT_STR_EQ("duplicate rule name", engine_strerror(ENGINE_ERR_DUPLICATE_RULE));
+    ASSERT_STR_EQ("invalid operator", engine_strerror(ENGINE_ERR_INVALID_OPERATOR));
+    ASSERT_STR_EQ("rule missing name", engine_strerror(ENGINE_ERR_MISSING_RULE_NAME));
+    ASSERT_STR_EQ("rule missing action", engine_strerror(ENGINE_ERR_MISSING_RULE_ACTION));
+    ASSERT_STR_EQ("fact not found", engine_strerror(ENGINE_ERR_FACT_NOT_FOUND));
+    ASSERT_STR_EQ("bool compared with number", engine_strerror(ENGINE_ERR_BOOL_COMPARED));
+    ASSERT_STR_EQ("empty operator array", engine_strerror(ENGINE_ERR_EMPTY_ARRAY));
+    ASSERT_STR_EQ("invalid comparison value", engine_strerror(ENGINE_ERR_INVALID_VALUE));
+    ASSERT_STR_EQ("invalid bytecode magic", engine_strerror(ENGINE_ERR_INVALID_MAGIC));
+    ASSERT_STR_EQ("invalid bytecode version", engine_strerror(ENGINE_ERR_INVALID_VERSION));
+    ASSERT_STR_EQ("invalid rule count", engine_strerror(ENGINE_ERR_INVALID_RULE_COUNT));
+    ASSERT_STR_EQ("invalid instruction count", engine_strerror(ENGINE_ERR_INVALID_INSTR_COUNT));
+    ASSERT_STR_EQ("truncated bytecode file", engine_strerror(ENGINE_ERR_TRUNCATED_FILE));
+    ASSERT_STR_EQ("instruction count mismatch", engine_strerror(ENGINE_ERR_INSTRUCTION_COUNT_MISMATCH));
+    ASSERT_STR_EQ("action name too long", engine_strerror(ENGINE_ERR_ACTION_NAME_TOO_LONG));
+    ASSERT_STR_EQ("fact name too long", engine_strerror(ENGINE_ERR_FACT_NAME_TOO_LONG));
+    ASSERT_STR_EQ("rule name too long", engine_strerror(ENGINE_ERR_RULE_NAME_TOO_LONG));
+    ASSERT_STR_EQ("VM stack overflow", engine_strerror(ENGINE_ERR_STACK_OVERFLOW));
+    ASSERT_STR_EQ("VM stack underflow", engine_strerror(ENGINE_ERR_STACK_UNDERFLOW));
+    ASSERT_STR_EQ("VM execution error", engine_strerror(ENGINE_ERR_VM));
+    ASSERT_STR_EQ("parse error", engine_strerror(ENGINE_ERR_PARSE));
+    ASSERT_STR_EQ("string comparison only supports == and !=", engine_strerror(ENGINE_ERR_STRING_CMP_NOT_EQ_NE));
+    ASSERT_STR_EQ("unknown error", engine_strerror((EngineError)9999));
+    PASS();
+}
+
+TEST engine_invalid_file_returns_error(void)
+{
+    Engine* e = createEngine("/nonexistent/path.json", JSON);
+    ASSERT_FALSE(e);
+    PASS();
+}
+
+TEST engine_get_last_error_null(void)
+{
+    ASSERT_EQ(ENGINE_ERR_NULL_ARG, engine_get_last_error(NULL));
+    PASS();
+}
+
+SUITE(engine_suite)
+{
+    RUN_TEST(engine_strerror_all_codes);
+    RUN_TEST(engine_invalid_file_returns_error);
+    RUN_TEST(engine_get_last_error_null);
+}
 
 
 
@@ -853,5 +1053,7 @@ int main(int argc, char** argv)
     RUN_SUITE(factdb_suite);
     RUN_SUITE(vm_suite);
     RUN_SUITE(action_suite);
+    RUN_SUITE(semantic_suite);
+    RUN_SUITE(engine_suite);
     GREATEST_MAIN_END;
 }
