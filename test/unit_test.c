@@ -20,7 +20,8 @@
 
 //-----------------------ARENA SUITE -------------------//
 
-TEST arena_create_destroy(void){
+TEST arena_create_destroy(void)
+{
     Arena* a = createArena(4096);
     ASSERT(a);
     ASSERT_EQ(4096, a->size);
@@ -30,7 +31,8 @@ TEST arena_create_destroy(void){
     PASS();
 }
 
-TEST arena_alloc_basic(void){
+TEST arena_alloc_basic(void)
+{
     Arena* a = createArena(1024);
     ASSERT(a);
     int* p = (int*)arena_alloc(a, sizeof(int));
@@ -42,7 +44,8 @@ TEST arena_alloc_basic(void){
     PASS();
 }
 
-TEST arena_strdup_basic(void){
+TEST arena_strdup_basic(void)
+{
     Arena* a = createArena(2048);
     ASSERT(a);
     char* s = arena_strdup(a, "hello world");
@@ -52,7 +55,8 @@ TEST arena_strdup_basic(void){
     PASS();
 }
 
-TEST arena_reset_reuse(void){
+TEST arena_reset_reuse(void)
+{
     Arena* a = createArena(2048);
     ASSERT(a);
     char* s1 = arena_strdup(a, "first");
@@ -67,7 +71,8 @@ TEST arena_reset_reuse(void){
     PASS();
 }
 
-TEST arena_alloc_zero_size(void){
+TEST arena_alloc_zero_size(void)
+{
     Arena* a = createArena(1024);
     ASSERT(a);
     ASSERT_FALSE(arena_alloc(a, 0));
