@@ -7,11 +7,14 @@ find_library(YYJSON_LIB yyjson REQUIRED)
 # *_internal.h headers (Arena, FactDB, RuleEngine, Engine).
 find_package(Threads REQUIRED)
 
-add_executable(engine
+# Valgrind for leak checking (used by multiple custom targets below)
+find_program(VALGRIND_EXECUTABLE valgrind)
+
+# ---------- common source files used by both executables ----------
+set(CORE_SOURCES
     src/engine/factdb.c
     src/engine/rule.c
     src/engine/ConditionTree.c
-    test/testRunner.c
     src/engine/parser_engine.c
     src/engine/semanticChecker.c
     src/engine/engine.c
@@ -21,19 +24,14 @@ add_executable(engine
     src/engine/readBin.c
 )
 
-target_include_directories(engine PRIVATE ${CMAKE_SOURCE_DIR}/include)
+set(CORE_INCLUDES ${CMAKE_SOURCE_DIR}/include)
+set(CORE_FLAGS -g -O0 -Wall -Wextra -pedantic -std=c11 -D_POSIX_C_SOURCE=200809L)
 
-target_compile_options(engine PRIVATE
-    -g -O0 -Wall -Wextra -pedantic -std=c11 -D_POSIX_C_SOURCE=200809L
-)
-
-target_link_libraries(engine PRIVATE
-    ${YYJSON_LIB}
-    Threads::Threads
-)
-
-# Valgrind target
-find_program(VALGRIND_EXECUTABLE valgrind)
+# ===================== Integration test (original) =====================
+add_executable(engine ${CORE_SOURCES} test/testRunner.c)
+target_include_directories(engine PRIVATE ${CORE_INCLUDES})
+target_compile_options(engine PRIVATE ${CORE_FLAGS})
+target_link_libraries(engine PRIVATE ${YYJSON_LIB} Threads::Threads)
 
 if(VALGRIND_EXECUTABLE)
     add_custom_target(
@@ -45,6 +43,34 @@ if(VALGRIND_EXECUTABLE)
                 --verbose
                 $<TARGET_FILE:engine>
         DEPENDS engine
+        WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
+    )
+endif()
+
+# ===================== Unit tests (greatest.h) =====================
+add_executable(unit_tests ${CORE_SOURCES} test/unit_tests.c)
+target_include_directories(unit_tests PRIVATE ${CORE_INCLUDES})
+target_compile_options(unit_tests PRIVATE ${CORE_FLAGS})
+target_link_libraries(unit_tests PRIVATE ${YYJSON_LIB} Threads::Threads)
+
+add_custom_target(
+    run_unit_tests
+    COMMAND $<TARGET_FILE:unit_tests>
+    DEPENDS unit_tests
+    WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
+)
+
+if(VALGRIND_EXECUTABLE)
+    add_custom_target(
+        valgrind_unit_tests
+        COMMAND ${VALGRIND_EXECUTABLE}
+                --leak-check=full
+                --show-leak-kinds=all
+                --track-origins=yes
+                --verbose
+                --error-exitcode=1
+                $<TARGET_FILE:unit_tests>
+        DEPENDS unit_tests
         WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
     )
 endif()
