@@ -76,6 +76,40 @@ TEST arena_alloc_zero_size(void){
 }
 
 
+TEST arena_alloc_null_arena(void)
+{
+    ASSERT_FALSE(arena_alloc(NULL, 64));
+    PASS();
+}
+
+TEST arena_overflow_returns_null(void)
+{
+    Arena* a = createArena(16);
+    ASSERT(a);
+    ASSERT(arena_alloc(a, 8));
+    ASSERT_FALSE(arena_alloc(a, 16));
+    destroyArena(a);
+    PASS();
+}
+
+TEST arena_destroy_null(void)
+{
+    destroyArena(NULL);
+    PASS();
+}
+
+TEST arena_reset_null(void)
+{
+    arena_reset(NULL);
+    PASS();
+}
+
+TEST arena_null_create(void)
+{
+    ASSERT_FALSE(createArena(0));
+    PASS();
+}
+
 SUITE(arena_suite)
 {
     RUN_TEST(arena_create_destroy);
@@ -83,7 +117,13 @@ SUITE(arena_suite)
     RUN_TEST(arena_strdup_basic);
     RUN_TEST(arena_reset_reuse);
     RUN_TEST(arena_alloc_zero_size);
+    RUN_TEST(arena_alloc_null_arena);
+    RUN_TEST(arena_overflow_returns_null);
+    RUN_TEST(arena_destroy_null);
+    RUN_TEST(arena_reset_null);
+    RUN_TEST(arena_null_create);
 }
+
 
 
 
