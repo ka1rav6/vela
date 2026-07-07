@@ -285,6 +285,487 @@ SUITE(factdb_suite)
     RUN_TEST(factdb_str_null_equivalence);
 }
 
+//----------------BYTECODE/VM SUITE -------------------//
+
+static FactDB* make_test_db(void)
+{
+    FactDB* db = createFactDB();
+    setBoolFact(db, "true_fact", true);
+    setBoolFact(db, "false_fact", false);
+    setNumFact(db, "age", 25);
+    setNumFact(db, "score", 42);
+    setNumFact(db, "zero", 0);
+    setStringFact(db, "greeting", "hello");
+    setStringFact(db, "empty_str", "");
+    return db;
+}
+
+TEST vm_push_fact_true(void)
+{
+    Arena* a = createArena(2048);
+    FactDB* db = make_test_db();
+
+    Node* n = createNode(a, NODE_FACT);
+    n->data.Fact.factName = arena_strdup(a, "true_fact");
+    Bytecode* bc = compileNode(a, n);
+    ASSERT(bc);
+    ASSERT_EQ(VM_TRUE, runBytecode(db, bc));
+
+    destroyArena(a);
+    deleteFactDB(db);
+    PASS();
+}
+
+TEST vm_push_fact_false(void)
+{
+    Arena* a = createArena(2048);
+    FactDB* db = make_test_db();
+
+    Node* n = createNode(a, NODE_FACT);
+    n->data.Fact.factName = arena_strdup(a, "false_fact");
+    Bytecode* bc = compileNode(a, n);
+    ASSERT_EQ(VM_FALSE, runBytecode(db, bc));
+
+    destroyArena(a);
+    deleteFactDB(db);
+    PASS();
+}
+
+TEST vm_null_pushes_false(void)
+{
+    Arena* a = createArena(2048);
+    FactDB* db = make_test_db();
+
+    Node* n = createNode(a, NODE_NULL);
+    Bytecode* bc = compileNode(a, n);
+    ASSERT(bc);
+    ASSERT_EQ(VM_FALSE, runBytecode(db, bc));
+
+    destroyArena(a);
+    deleteFactDB(db);
+    PASS();
+}
+
+TEST vm_compare_gt(void)
+{
+    Arena* a = createArena(2048);
+    FactDB* db = make_test_db();
+
+    Node* n = createNode(a, NODE_COMPARE);
+    n->data.Compare.factName = arena_strdup(a, "age");
+    n->data.Compare.op = OP_GT;
+    n->data.Compare.val = 18;
+    Bytecode* bc = compileNode(a, n);
+    ASSERT_EQ(VM_TRUE, runBytecode(db, bc));
+
+    n->data.Compare.val = 30;
+    bc = compileNode(a, n);
+    ASSERT_EQ(VM_FALSE, runBytecode(db, bc));
+
+    destroyArena(a);
+    deleteFactDB(db);
+    PASS();
+}
+
+TEST vm_compare_ge(void)
+{
+    Arena* a = createArena(2048);
+    FactDB* db = make_test_db();
+
+    Node* n = createNode(a, NODE_COMPARE);
+    n->data.Compare.factName = arena_strdup(a, "age");
+    n->data.Compare.op = OP_GE;
+    n->data.Compare.val = 25;
+    Bytecode* bc = compileNode(a, n);
+    ASSERT_EQ(VM_TRUE, runBytecode(db, bc));
+
+    n->data.Compare.val = 26;
+    bc = compileNode(a, n);
+    ASSERT_EQ(VM_FALSE, runBytecode(db, bc));
+
+    destroyArena(a);
+    deleteFactDB(db);
+    PASS();
+}
+
+TEST vm_compare_lt(void)
+{
+    Arena* a = createArena(2048);
+    FactDB* db = make_test_db();
+
+    Node* n = createNode(a, NODE_COMPARE);
+    n->data.Compare.factName = arena_strdup(a, "score");
+    n->data.Compare.op = OP_LT;
+    n->data.Compare.val = 100;
+    Bytecode* bc = compileNode(a, n);
+    ASSERT_EQ(VM_TRUE, runBytecode(db, bc));
+
+    n->data.Compare.val = 10;
+    bc = compileNode(a, n);
+    ASSERT_EQ(VM_FALSE, runBytecode(db, bc));
+
+    destroyArena(a);
+    deleteFactDB(db);
+    PASS();
+}
+
+TEST vm_compare_le(void)
+{
+    Arena* a = createArena(2048);
+    FactDB* db = make_test_db();
+
+    Node* n = createNode(a, NODE_COMPARE);
+    n->data.Compare.factName = arena_strdup(a, "score");
+    n->data.Compare.op = OP_LE;
+    n->data.Compare.val = 42;
+    Bytecode* bc = compileNode(a, n);
+    ASSERT_EQ(VM_TRUE, runBytecode(db, bc));
+
+    n->data.Compare.val = 41;
+    bc = compileNode(a, n);
+    ASSERT_EQ(VM_FALSE, runBytecode(db, bc));
+
+    destroyArena(a);
+    deleteFactDB(db);
+    PASS();
+}
+
+TEST vm_compare_eq(void)
+{
+    Arena* a = createArena(2048);
+    FactDB* db = make_test_db();
+
+    Node* n = createNode(a, NODE_COMPARE);
+    n->data.Compare.factName = arena_strdup(a, "score");
+    n->data.Compare.op = OP_EQ;
+    n->data.Compare.val = 42;
+    Bytecode* bc = compileNode(a, n);
+    ASSERT_EQ(VM_TRUE, runBytecode(db, bc));
+
+    n->data.Compare.val = 0;
+    bc = compileNode(a, n);
+    ASSERT_EQ(VM_FALSE, runBytecode(db, bc));
+
+    destroyArena(a);
+    deleteFactDB(db);
+    PASS();
+}
+
+TEST vm_compare_ne(void)
+{
+    Arena* a = createArena(2048);
+    FactDB* db = make_test_db();
+
+    Node* n = createNode(a, NODE_COMPARE);
+    n->data.Compare.factName = arena_strdup(a, "score");
+    n->data.Compare.op = OP_NE;
+    n->data.Compare.val = 0;
+    Bytecode* bc = compileNode(a, n);
+    ASSERT_EQ(VM_TRUE, runBytecode(db, bc));
+
+    n->data.Compare.val = 42;
+    bc = compileNode(a, n);
+    ASSERT_EQ(VM_FALSE, runBytecode(db, bc));
+
+    destroyArena(a);
+    deleteFactDB(db);
+    PASS();
+}
+
+TEST vm_str_cmp_eq(void)
+{
+    Arena* a = createArena(2048);
+    FactDB* db = make_test_db();
+
+    Node* n = createNode(a, NODE_STR_CMP);
+    n->data.StrCmp.factName = arena_strdup(a, "greeting");
+    n->data.StrCmp.strVal = arena_strdup(a, "hello");
+    n->data.StrCmp.op = OP_EQ;
+    Bytecode* bc = compileNode(a, n);
+    ASSERT_EQ(VM_TRUE, runBytecode(db, bc));
+
+    n->data.StrCmp.strVal = arena_strdup(a, "world");
+    bc = compileNode(a, n);
+    ASSERT_EQ(VM_FALSE, runBytecode(db, bc));
+
+    destroyArena(a);
+    deleteFactDB(db);
+    PASS();
+}
+
+TEST vm_str_cmp_ne(void)
+{
+    Arena* a = createArena(2048);
+    FactDB* db = make_test_db();
+
+    Node* n = createNode(a, NODE_STR_CMP);
+    n->data.StrCmp.factName = arena_strdup(a, "greeting");
+    n->data.StrCmp.strVal = arena_strdup(a, "world");
+    n->data.StrCmp.op = OP_NE;
+    Bytecode* bc = compileNode(a, n);
+    ASSERT_EQ(VM_TRUE, runBytecode(db, bc));
+
+    n->data.StrCmp.strVal = arena_strdup(a, "hello");
+    bc = compileNode(a, n);
+    ASSERT_EQ(VM_FALSE, runBytecode(db, bc));
+
+    destroyArena(a);
+    deleteFactDB(db);
+    PASS();
+}
+
+TEST vm_str_cmp_empty_with_empty(void)
+{
+    Arena* a = createArena(2048);
+    FactDB* db = make_test_db();
+
+    Node* n = createNode(a, NODE_STR_CMP);
+    n->data.StrCmp.factName = arena_strdup(a, "empty_str");
+    n->data.StrCmp.strVal = arena_strdup(a, "");
+    n->data.StrCmp.op = OP_EQ;
+    Bytecode* bc = compileNode(a, n);
+    ASSERT_EQ(VM_TRUE, runBytecode(db, bc));
+
+    destroyArena(a);
+    deleteFactDB(db);
+    PASS();
+}
+
+TEST vm_str_cmp_missing_fact(void)
+{
+    Arena* a = createArena(2048);
+    FactDB* db = make_test_db();
+
+    Node* n = createNode(a, NODE_STR_CMP);
+    n->data.StrCmp.factName = arena_strdup(a, "no_such_fact");
+    n->data.StrCmp.strVal = arena_strdup(a, "x");
+    n->data.StrCmp.op = OP_EQ;
+    Bytecode* bc = compileNode(a, n);
+    ASSERT_EQ(VM_FALSE, runBytecode(db, bc));
+
+    n->data.StrCmp.op = OP_NE;
+    bc = compileNode(a, n);
+    ASSERT_EQ(VM_TRUE, runBytecode(db, bc));
+
+    destroyArena(a);
+    deleteFactDB(db);
+    PASS();
+}
+
+TEST vm_and_true_true(void)
+{
+    Arena* a = createArena(2048);
+    FactDB* db = make_test_db();
+
+    Node* l = createNode(a, NODE_FACT);
+    l->data.Fact.factName = arena_strdup(a, "true_fact");
+    Node* r = createNode(a, NODE_FACT);
+    r->data.Fact.factName = arena_strdup(a, "true_fact");
+    Node* andN = createNode(a, NODE_AND);
+    andN->data.op.left = l;
+    andN->data.op.right = r;
+
+    Bytecode* bc = compileNode(a, andN);
+    ASSERT_EQ(VM_TRUE, runBytecode(db, bc));
+
+    destroyArena(a);
+    deleteFactDB(db);
+    PASS();
+}
+
+TEST vm_and_true_false(void)
+{
+    Arena* a = createArena(2048);
+    FactDB* db = make_test_db();
+
+    Node* l = createNode(a, NODE_FACT);
+    l->data.Fact.factName = arena_strdup(a, "true_fact");
+    Node* r = createNode(a, NODE_FACT);
+    r->data.Fact.factName = arena_strdup(a, "false_fact");
+    Node* andN = createNode(a, NODE_AND);
+    andN->data.op.left = l;
+    andN->data.op.right = r;
+
+    Bytecode* bc = compileNode(a, andN);
+    ASSERT_EQ(VM_FALSE, runBytecode(db, bc));
+
+    destroyArena(a);
+    deleteFactDB(db);
+    PASS();
+}
+
+TEST vm_or_false_true(void)
+{
+    Arena* a = createArena(2048);
+    FactDB* db = make_test_db();
+
+    Node* l = createNode(a, NODE_FACT);
+    l->data.Fact.factName = arena_strdup(a, "false_fact");
+    Node* r = createNode(a, NODE_FACT);
+    r->data.Fact.factName = arena_strdup(a, "true_fact");
+    Node* orN = createNode(a, NODE_OR);
+    orN->data.op.left = l;
+    orN->data.op.right = r;
+
+    Bytecode* bc = compileNode(a, orN);
+    ASSERT_EQ(VM_TRUE, runBytecode(db, bc));
+
+    destroyArena(a);
+    deleteFactDB(db);
+    PASS();
+}
+
+TEST vm_or_false_false(void)
+{
+    Arena* a = createArena(2048);
+    FactDB* db = make_test_db();
+
+    Node* l = createNode(a, NODE_FACT);
+    l->data.Fact.factName = arena_strdup(a, "false_fact");
+    Node* r = createNode(a, NODE_FACT);
+    r->data.Fact.factName = arena_strdup(a, "false_fact");
+    Node* orN = createNode(a, NODE_OR);
+    orN->data.op.left = l;
+    orN->data.op.right = r;
+
+    Bytecode* bc = compileNode(a, orN);
+    ASSERT_EQ(VM_FALSE, runBytecode(db, bc));
+
+    destroyArena(a);
+    deleteFactDB(db);
+    PASS();
+}
+
+TEST vm_not_true(void)
+{
+    Arena* a = createArena(2048);
+    FactDB* db = make_test_db();
+
+    Node* c = createNode(a, NODE_FACT);
+    c->data.Fact.factName = arena_strdup(a, "true_fact");
+    Node* notN = createNode(a, NODE_NOT);
+    notN->data.unary.child = c;
+
+    Bytecode* bc = compileNode(a, notN);
+    ASSERT_EQ(VM_FALSE, runBytecode(db, bc));
+
+    destroyArena(a);
+    deleteFactDB(db);
+    PASS();
+}
+
+TEST vm_not_false(void)
+{
+    Arena* a = createArena(2048);
+    FactDB* db = make_test_db();
+
+    Node* c = createNode(a, NODE_FACT);
+    c->data.Fact.factName = arena_strdup(a, "false_fact");
+    Node* notN = createNode(a, NODE_NOT);
+    notN->data.unary.child = c;
+
+    Bytecode* bc = compileNode(a, notN);
+    ASSERT_EQ(VM_TRUE, runBytecode(db, bc));
+
+    destroyArena(a);
+    deleteFactDB(db);
+    PASS();
+}
+
+TEST vm_complex_nested(void)
+{
+    Arena* a = createArena(1024);
+    FactDB* db = make_test_db();
+
+    /* (age > 18) AND (isAdmin OR isGuest) */
+    Node* cmp = createNode(a, NODE_COMPARE);
+    cmp->data.Compare.factName = arena_strdup(a, "age");
+    cmp->data.Compare.op = OP_GT;
+    cmp->data.Compare.val = 18;
+
+    Node* admin = createNode(a, NODE_FACT);
+    admin->data.Fact.factName = arena_strdup(a, "true_fact");
+
+    Node* guest = createNode(a, NODE_FACT);
+    guest->data.Fact.factName = arena_strdup(a, "false_fact");
+
+    Node* orN = createNode(a, NODE_OR);
+    orN->data.op.left = admin;
+    orN->data.op.right = guest;
+
+    Node* andN = createNode(a, NODE_AND);
+    andN->data.op.left = cmp;
+    andN->data.op.right = orN;
+
+    Bytecode* bc = compileNode(a, andN);
+    ASSERT_EQ(VM_TRUE, runBytecode(db, bc));
+
+    destroyArena(a);
+    deleteFactDB(db);
+    PASS();
+}
+
+TEST vm_nested_not_and_or(void)
+{
+    Arena* a = createArena(1024);
+    FactDB* db = make_test_db();
+
+    /* NOT( age <= 18 OR isBanned ) */
+    Node* cmp = createNode(a, NODE_COMPARE);
+    cmp->data.Compare.factName = arena_strdup(a, "age");
+    cmp->data.Compare.op = OP_LE;
+    cmp->data.Compare.val = 18;
+
+    Node* banned = createNode(a, NODE_FACT);
+    banned->data.Fact.factName = arena_strdup(a, "false_fact");
+
+    Node* orN = createNode(a, NODE_OR);
+    orN->data.op.left = cmp;
+    orN->data.op.right = banned;
+
+    Node* notN = createNode(a, NODE_NOT);
+    notN->data.unary.child = orN;
+
+    Bytecode* bc = compileNode(a, notN);
+    ASSERT_EQ(VM_TRUE, runBytecode(db, bc));
+
+    destroyArena(a);
+    deleteFactDB(db);
+    PASS();
+}
+
+SUITE(vm_suite)
+{
+    RUN_TEST(vm_push_fact_true);
+    RUN_TEST(vm_push_fact_false);
+    RUN_TEST(vm_null_pushes_false);
+    RUN_TEST(vm_compare_gt);
+    RUN_TEST(vm_compare_ge);
+    RUN_TEST(vm_compare_lt);
+    RUN_TEST(vm_compare_le);
+    RUN_TEST(vm_compare_eq);
+    RUN_TEST(vm_compare_ne);
+    RUN_TEST(vm_str_cmp_eq);
+    RUN_TEST(vm_str_cmp_ne);
+    RUN_TEST(vm_str_cmp_empty_with_empty);
+    RUN_TEST(vm_str_cmp_missing_fact);
+    RUN_TEST(vm_and_true_true);
+    RUN_TEST(vm_and_true_false);
+    RUN_TEST(vm_or_false_true);
+    RUN_TEST(vm_or_false_false);
+    RUN_TEST(vm_not_true);
+    RUN_TEST(vm_not_false);
+    RUN_TEST(vm_complex_nested);
+    RUN_TEST(vm_nested_not_and_or);
+}
+
+
+
+
+
+
+
+
 
 
 // ---------------------- MAIN ------------------------//
@@ -295,5 +776,6 @@ int main(int argc, char** argv)
     GREATEST_MAIN_BEGIN;
     RUN_SUITE(arena_suite);
     RUN_SUITE(factdb_suite);
+    RUN_SUITE(vm_suite);
     GREATEST_MAIN_END;
 }
