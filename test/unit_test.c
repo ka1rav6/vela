@@ -1040,6 +1040,359 @@ SUITE(engine_suite)
     RUN_TEST(engine_get_last_error_null);
 }
 
+//--------ENGINE INTEGRATION LOW LEVEL SUITE-----------//
+
+TEST rule_engine_create_destroy(void)
+{
+    RuleEngine* re = createRuleEngine();
+    ASSERT(re);
+    ASSERT(re->arena);
+    ASSERT_FALSE(re->rules);
+    deleteRuleEngine(re);
+    PASS();
+}
+
+TEST rule_engine_create_rule_add_find(void)
+{
+    RuleEngine* re = createRuleEngine();
+    ASSERT(re);
+
+    Node* n = createNode(re->arena, NODE_NULL);
+    Rule* r = createRule(re, n, "MY_ACTION", "my_rule", NULL);
+    ASSERT(r);
+    ASSERT_STR_EQ("my_rule", rule_name(r));
+    ASSERT_STR_EQ("MY_ACTION", rule_action(r));
+    ASSERT_EQ(n, rule_condition(r));
+
+    addRule(re, r);
+    Rule* found = findRule(re, "my_rule");
+    ASSERT(found);
+    ASSERT_EQ(r, found);
+
+    ASSERT_FALSE(findRule(re, "nonexistent"));
+    deleteRuleEngine(re);
+    PASS();
+}
+
+TEST re_bind_action(void)
+{
+    RuleEngine* re = createRuleEngine();
+    ASSERT(re);
+
+    Node* n1 = createNode(re->arena, NODE_NULL);
+    Node* n2 = createNode(re->arena, NODE_NULL);
+    Rule* r1 = createRule(re, n1, "A", "r1", NULL);
+    Rule* r2 = createRule(re, n2, "A", "r2", (void*)0x1);
+    Rule* r3 = createRule(re, createNode(re->arena, NODE_NULL), "B", "r3", (void*)0x2);
+    addRule(re, r1);
+    addRule(re, r2);
+    addRule(re, r3);
+
+    int ctx_val = 0;
+    rule_engine_bind_action(re, "A", test_action_fn, &ctx_val);
+    ASSERT_EQ(test_action_fn, r1->func);
+    ASSERT_EQ(&ctx_val, r1->ctx);
+    ASSERT_EQ(test_action_fn, r2->func);
+    ASSERT_EQ(&ctx_val, r2->ctx);
+    ASSERT_FALSE(r3->func);
+
+    deleteRuleEngine(re);
+    PASS();
+}
+
+static void re_for_each_cb(Rule* r, void* ctx)
+{
+    (void)r;
+    (*(int*)ctx)++;
+}
+
+TEST re_for_each(void)
+{
+    RuleEngine* re = createRuleEngine();
+    int count = 0;
+
+    for (int i = 0; i < 3; i++)
+    {
+        char name[32];
+        snprintf(name, sizeof(name), "r%d", i);
+        Rule* r = createRule(re, createNode(re->arena, NODE_NULL), "A", name, NULL);
+        addRule(re, r);
+    }
+
+    rule_engine_for_each(re, re_for_each_cb, &count);
+    ASSERT_EQ(3, count);
+    deleteRuleEngine(re);
+    PASS();
+}
+
+TEST rule_engine_delete_null(void)
+{
+    deleteRuleEngine(NULL);
+    PASS();
+}
+
+SUITE(rule_engine_suite)
+{
+    RUN_TEST(rule_engine_create_destroy);
+    RUN_TEST(rule_engine_create_rule_add_find);
+    RUN_TEST(re_bind_action);
+    RUN_TEST(re_for_each);
+    RUN_TEST(rule_engine_delete_null);
+}
+
+
+//-------------------PARSER SUITE ---------------------//
+
+TEST parse_json_file_not_found(void)
+{
+    ASSERT_FALSE(parseJSON("/nonexistent/file.json"));
+    PASS();
+}
+
+TEST parse_json_valid_file(void)
+{
+    yyjson_doc* doc = parseJSON("../test/test1.json");
+    ASSERT(doc);
+    yyjson_doc_free(doc);
+    PASS();
+}
+
+TEST build_ast_with_nonexistent_fact(void)
+{
+    FactDB* db = createFactDB();
+    setBoolFact(db, "exists", true);
+
+    const char* json = "{\"facts\":{\"exists\":true},\"rules\":["
+        "{\"name\":\"r\",\"action\":\"A\",\"if\":\"nonexistent\"}]}";
+    yyjson_doc* doc = yyjson_read(json, strlen(json), 0);
+    ASSERT(doc);
+
+    EngineError err = ENGINE_SUCCESS;
+    RuleEngine* re = build_ast(doc, db, &err);
+    ASSERT_FALSE(re);
+    ASSERT_EQ(ENGINE_ERR_FACT_NOT_FOUND, err);
+
+    deleteFactDB(db);
+    PASS();
+}
+
+TEST build_ast_missing_rule_name(void)
+{
+    FactDB* db = createFactDB();
+    const char* json = "{\"facts\":{},\"rules\":["
+        "{\"action\":\"A\",\"if\":\"_\"}]}";
+    yyjson_doc* doc = yyjson_read(json, strlen(json), 0);
+    ASSERT(doc);
+
+    EngineError err = ENGINE_SUCCESS;
+    RuleEngine* re = build_ast(doc, db, &err);
+    ASSERT_FALSE(re);
+    ASSERT_EQ(ENGINE_ERR_MISSING_RULE_NAME, err);
+
+    deleteFactDB(db);
+    PASS();
+}
+
+TEST build_ast_invalid_operator(void)
+{
+    FactDB* db = createFactDB();
+    setBoolFact(db, "x", true);
+    const char* json = "{\"facts\":{\"x\":true},\"rules\":["
+        "{\"name\":\"r\",\"action\":\"A\",\"if\":{\"xor\":[\"x\"]}}]}";
+    yyjson_doc* doc = yyjson_read(json, strlen(json), 0);
+    ASSERT(doc);
+
+    EngineError err = ENGINE_SUCCESS;
+    RuleEngine* re = build_ast(doc, db, &err);
+    ASSERT_FALSE(re);
+    ASSERT_EQ(ENGINE_ERR_INVALID_OPERATOR, err);
+
+    deleteFactDB(db);
+    PASS();
+}
+
+TEST build_ast_empty_and(void)
+{
+    FactDB* db = createFactDB();
+    const char* json = "{\"facts\":{},\"rules\":["
+        "{\"name\":\"r\",\"action\":\"A\",\"if\":{\"and\":[]}}]}";
+    yyjson_doc* doc = yyjson_read(json, strlen(json), 0);
+    ASSERT(doc);
+
+    EngineError err = ENGINE_SUCCESS;
+    RuleEngine* re = build_ast(doc, db, &err);
+    ASSERT_FALSE(re);
+    ASSERT_EQ(ENGINE_ERR_EMPTY_ARRAY, err);
+
+    deleteFactDB(db);
+    PASS();
+}
+
+TEST build_ast_duplicate_rule(void)
+{
+    FactDB* db = createFactDB();
+    setBoolFact(db, "x", true);
+    const char* json = "{\"facts\":{\"x\":true},\"rules\":["
+        "{\"name\":\"r\",\"action\":\"A\",\"if\":\"x\"},"
+        "{\"name\":\"r\",\"action\":\"A\",\"if\":\"x\"}]}";
+    yyjson_doc* doc = yyjson_read(json, strlen(json), 0);
+    ASSERT(doc);
+
+    EngineError err = ENGINE_SUCCESS;
+    RuleEngine* re = build_ast(doc, db, &err);
+    ASSERT_FALSE(re);
+    ASSERT_EQ(ENGINE_ERR_DUPLICATE_RULE, err);
+
+    deleteFactDB(db);
+    PASS();
+}
+
+TEST build_ast_null_node(void)
+{
+    FactDB* db = createFactDB();
+    setBoolFact(db, "x", true);
+    setBoolFact(db, "y", true);
+    const char* json = "{\"facts\":{\"x\":true,\"y\":true},\"rules\":["
+        "{\"name\":\"r\",\"action\":\"A\",\"if\":{\"and\":[\"x\",{\"null\":[]}]}}]}";
+    yyjson_doc* doc = yyjson_read(json, strlen(json), 0);
+    ASSERT(doc);
+
+    EngineError err = ENGINE_SUCCESS;
+    RuleEngine* re = build_ast(doc, db, &err);
+    ASSERT(re);
+    ASSERT_EQ(ENGINE_SUCCESS, err);
+
+    Rule* r = findRule(re, "r");
+    ASSERT(r);
+    ASSERT_EQ(NODE_AND, r->condition->type);
+
+    deleteRuleEngine(re);
+    deleteFactDB(db);
+    PASS();
+}
+
+TEST build_ast_str_cmp(void)
+{
+    FactDB* db = createFactDB();
+    setStringFact(db, "role", "admin");
+    const char* json = "{\"facts\":{\"role\":\"admin\"},\"rules\":["
+        "{\"name\":\"r\",\"action\":\"A\",\"if\":{\"==\":[\"role\",\"admin\"]}}]}";
+    yyjson_doc* doc = yyjson_read(json, strlen(json), 0);
+    ASSERT(doc);
+
+    EngineError err = ENGINE_SUCCESS;
+    RuleEngine* re = build_ast(doc, db, &err);
+    ASSERT(re);
+    ASSERT_EQ(ENGINE_SUCCESS, err);
+
+    Rule* r = findRule(re, "r");
+    ASSERT(r);
+
+    VMResult res = runBytecode(db, r->bc);
+    ASSERT_EQ(VM_TRUE, res);
+
+    deleteRuleEngine(re);
+    deleteFactDB(db);
+    PASS();
+}
+
+TEST build_ast_bool_compared_error(void)
+{
+    FactDB* db = createFactDB();
+    setBoolFact(db, "flag", true);
+    const char* json = "{\"facts\":{\"flag\":true},\"rules\":["
+        "{\"name\":\"r\",\"action\":\"A\",\"if\":{\">\":[\"flag\",0]}}]}";
+    yyjson_doc* doc = yyjson_read(json, strlen(json), 0);
+    ASSERT(doc);
+
+    EngineError err = ENGINE_SUCCESS;
+    RuleEngine* re = build_ast(doc, db, &err);
+    ASSERT_FALSE(re);
+    ASSERT_EQ(ENGINE_ERR_BOOL_COMPARED, err);
+
+    deleteFactDB(db);
+    PASS();
+}
+
+TEST build_ast_mixed_bool_num_array(void)
+{
+    FactDB* db = createFactDB();
+    setBoolFact(db, "b", true);
+    setNumFact(db, "n", 1.0);
+    const char* json = "{\"facts\":{\"b\":true,\"n\":1.0},\"rules\":["
+        "{\"name\":\"r\",\"action\":\"A\",\"if\":{\"and\":[\"b\",\"n\"]}}]}";
+    yyjson_doc* doc = yyjson_read(json, strlen(json), 0);
+    ASSERT(doc);
+
+    EngineError err = ENGINE_SUCCESS;
+    RuleEngine* re = build_ast(doc, db, &err);
+    ASSERT_FALSE(re);
+    ASSERT_EQ(ENGINE_ERR_BOOL_COMPARED, err);
+
+    deleteFactDB(db);
+    PASS();
+}
+
+SUITE(parser_suite)
+{
+    RUN_TEST(parse_json_file_not_found);
+    RUN_TEST(parse_json_valid_file);
+    RUN_TEST(build_ast_with_nonexistent_fact);
+    RUN_TEST(build_ast_missing_rule_name);
+    RUN_TEST(build_ast_invalid_operator);
+    RUN_TEST(build_ast_empty_and);
+    RUN_TEST(build_ast_duplicate_rule);
+    RUN_TEST(build_ast_null_node);
+    RUN_TEST(build_ast_str_cmp);
+    RUN_TEST(build_ast_bool_compared_error);
+    RUN_TEST(build_ast_mixed_bool_num_array);
+}
+
+
+//---------------FULL ENIGNE INTEGRATION---------------//
+
+TEST engine_full_integration_json(void)
+{
+    Engine* e = createEngine("../test/test1.json", JSON);
+    ASSERT(e);
+    ASSERT_EQ(ENGINE_SUCCESS, engine_get_last_error(e));
+
+    int pass_count = 0;
+    rule_engine_bind_action(engine_get_rule_engine(e), "SIMPLE_BOOL_FIRED",
+        test_action_fn, &pass_count);
+
+    EngineError err = runEngine(e);
+    ASSERT_EQ(ENGINE_SUCCESS, err);
+
+    deleteEngine(e);
+    PASS();
+}
+
+TEST engine_create_with_null_file(void)
+{
+    Engine* e = createEngine(NULL, JSON);
+    ASSERT_FALSE(e);
+    PASS();
+}
+
+TEST engine_register_null_args(void)
+{
+    Engine* e = createEngine("../test/test1.json", JSON);
+    ASSERT(e);
+    ASSERT_EQ(ENGINE_ERR_NULL_ARG, registerTheAction(NULL, "x", test_action_fn, NULL));
+    ASSERT_EQ(ENGINE_ERR_NULL_ARG, registerTheAction(e, NULL, test_action_fn, NULL));
+    ASSERT_EQ(ENGINE_ERR_NULL_ARG, registerTheAction(e, "x", NULL, NULL));
+    deleteEngine(e);
+    PASS();
+}
+
+SUITE(full_integration_suite)
+{
+    RUN_TEST(engine_full_integration_json);
+    RUN_TEST(engine_create_with_null_file);
+    RUN_TEST(engine_register_null_args);
+}
+
 
 
 
@@ -1055,5 +1408,8 @@ int main(int argc, char** argv)
     RUN_SUITE(action_suite);
     RUN_SUITE(semantic_suite);
     RUN_SUITE(engine_suite);
+    RUN_SUITE(rule_engine_suite);
+    RUN_SUITE(parser_suite);
+    RUN_SUITE(full_integration_suite);
     GREATEST_MAIN_END;
 }
