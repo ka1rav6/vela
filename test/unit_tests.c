@@ -1156,7 +1156,7 @@ TEST parse_json_file_not_found(void)
 
 TEST parse_json_valid_file(void)
 {
-    yyjson_doc* doc = parseJSON("../test/test1.json");
+    yyjson_doc* doc = parseJSON("test/test1.json");
     ASSERT(doc);
     yyjson_doc_free(doc);
     PASS();
@@ -1358,7 +1358,7 @@ SUITE(parser_suite)
 
 TEST engine_full_integration_json(void)
 {
-    Engine* e = createEngine("../test/test1.json", JSON);
+    Engine* e = createEngine("test/test1.json", JSON);
     ASSERT(e);
     ASSERT_EQ(ENGINE_SUCCESS, engine_get_last_error(e));
 
@@ -1382,7 +1382,7 @@ TEST engine_create_with_null_file(void)
 
 TEST engine_register_null_args(void)
 {
-    Engine* e = createEngine("../test/test1.json", JSON);
+    Engine* e = createEngine("test/test1.json", JSON);
     ASSERT(e);
     ASSERT_EQ(ENGINE_ERR_NULL_ARG, registerTheAction(NULL, "x", test_action_fn, NULL));
     ASSERT_EQ(ENGINE_ERR_NULL_ARG, registerTheAction(e, NULL, test_action_fn, NULL));

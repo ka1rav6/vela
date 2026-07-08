@@ -114,7 +114,7 @@ void cb_should_not_fire(FactDB* d, void* c){
 
 int main(void){
 
-    Engine* e = createEngine("../test/test1.json", JSON);
+    Engine* e = createEngine("test/test1.json", JSON);
     if (!e) {
         printf("Failed to create engine\n");
         return 1;
