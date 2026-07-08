@@ -1,4 +1,4 @@
-#include "factdb_internal.h"
+#include "../../include/factdb_internal.h"
 
 // gets the value of a numeric fact from the fact DB by searching for its name.
 // Thread-safe: read-locked, since multiple readers can look up facts concurrently.
@@ -64,6 +64,14 @@ void deleteFactDB(FactDB* db)
     free(db);
 }
 
+void factdb_on_change(FactDB* db, FactChangeCB cb, void* user_data)
+{
+    pthread_rwlock_wrlock(&db->lock);
+    db->on_change   = cb;
+    db->change_data = user_data;
+    pthread_rwlock_unlock(&db->lock);
+}
+
 void setBoolFact(FactDB* db, const char* name, bool val)
 {
     pthread_rwlock_wrlock(&db->lock);
@@ -73,6 +81,7 @@ void setBoolFact(FactDB* db, const char* name, bool val)
     {
         f->val = val;
         pthread_rwlock_unlock(&db->lock);
+        if (db->on_change) db->on_change(name, db->change_data);
         return;
     }
     if (strlen(name) > MAX_NAME)
@@ -87,6 +96,7 @@ void setBoolFact(FactDB* db, const char* name, bool val)
     f->val = val;
     HASH_ADD_STR(db->boolFacts, name, f);
     pthread_rwlock_unlock(&db->lock);
+    if (db->on_change) db->on_change(name, db->change_data);
 }
 
 void setNumFact(FactDB* db, const char* name, double val)
@@ -98,6 +108,7 @@ void setNumFact(FactDB* db, const char* name, double val)
     {
         f->val = val;
         pthread_rwlock_unlock(&db->lock);
+        if (db->on_change) db->on_change(name, db->change_data);
         return;
     }
     if (strlen(name) > MAX_NAME)
@@ -112,6 +123,7 @@ void setNumFact(FactDB* db, const char* name, double val)
     f->val = val;
     HASH_ADD_STR(db->numFacts, name, f);
     pthread_rwlock_unlock(&db->lock);
+    if (db->on_change) db->on_change(name, db->change_data);
 }
 
 char* getStringFact(FactDB* db, const char* name)
@@ -134,6 +146,7 @@ void setStringFact(FactDB* db, const char* name, const char* val)
         free(f->val);
         f->val = val ? strdup(val) : NULL;
         pthread_rwlock_unlock(&db->lock);
+        if (db->on_change) db->on_change(name, db->change_data);
         return;
     }
     if (strlen(name) > MAX_NAME)
@@ -148,6 +161,7 @@ void setStringFact(FactDB* db, const char* name, const char* val)
     f->val = val ? strdup(val) : NULL;
     HASH_ADD_STR(db->strFacts, name, f);
     pthread_rwlock_unlock(&db->lock);
+    if (db->on_change) db->on_change(name, db->change_data);
 }
 
 bool factdb_has_bool(FactDB* db, const char* name)

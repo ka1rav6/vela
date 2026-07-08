@@ -1,5 +1,5 @@
-#include "rule_internal.h"
-#include "bytecode.h"
+#include "../../include/rule_internal.h"
+#include "../../include/bytecode.h"
 
 #define VELABC_MAGIC    0x524C4542
 #define VELABC_VERSION  3
@@ -317,6 +317,8 @@ RuleEngine* loadBytecode(const char* file, FactDB* db, EngineError* err)
         rule->action    = arena_strdup(engine->arena, actionName);
         rule->bc        = bc;
         rule->condition = NULL;
+        rule->dirty     = true;
+        collectBytecodeDeps(rule->bc, engine->arena, &rule->deps, &rule->dep_count);
         addRule(engine, rule);
     }
 

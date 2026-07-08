@@ -5,7 +5,7 @@
 #include "ActionEntry.h"
 #include "arena.h"
 
-/* Opaque handle. Internals are hidden in engine_internal.h. */
+// Opaque handle. Internals are hidden in engine_internal.h.
 typedef struct Engine Engine;
 
 Engine* createEngine(const char*, FileType);
@@ -17,3 +17,8 @@ const char* engine_strerror(EngineError);
 
 FactDB*     engine_get_factdb(Engine*);
 RuleEngine* engine_get_rule_engine(Engine*);
+
+// Set a fact and automatically mark dependent rules as dirty
+EngineError engine_set_bool_fact(Engine*, const char* name, bool val);
+EngineError engine_set_num_fact(Engine*, const char* name, double val);
+EngineError engine_set_string_fact(Engine*, const char* name, const char* val);

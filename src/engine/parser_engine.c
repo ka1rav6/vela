@@ -1,7 +1,7 @@
-#include "rule_internal.h"
-#include "parser_engine.h"
-#include "semanticChecker.h"
-#include "bytecode.h"
+#include "../../include/rule_internal.h"
+#include "../../include/parser_engine.h"
+#include "../../include/semanticChecker.h"
+#include "../../include/bytecode.h"
 #include <yyjson.h>
 
 static Node* build_node(Arena*, FactDB*, yyjson_val*, EngineError*);
@@ -82,6 +82,7 @@ RuleEngine* build_ast(yyjson_doc* doc, FactDB* db, EngineError* err)
         strncpy(r->ruleName, yyjson_get_str(name), MAX_RULE_NAME - 1);
         r->ruleName[MAX_RULE_NAME - 1] = '\0';
         r->action = arena_strdup(engine->arena, yyjson_get_str(action));
+        r->dirty  = true;
 
         r->condition = build_node(engine->arena, db, cond, err);
         if (!r->condition)
@@ -91,6 +92,7 @@ RuleEngine* build_ast(yyjson_doc* doc, FactDB* db, EngineError* err)
             return NULL;
         }
         r->bc = compileNode(engine->arena, r->condition);
+        collectBytecodeDeps(r->bc, engine->arena, &r->deps, &r->dep_count);
         if (duplicateRule(engine, r->ruleName))
         {
             if (err) *err = ENGINE_ERR_DUPLICATE_RULE;

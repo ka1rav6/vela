@@ -1,4 +1,4 @@
-#include "bytecode.h"
+#include "../../include/bytecode.h"
 
 enum { STACK_MAX = 256 };
 
@@ -152,4 +152,33 @@ VMResult runBytecode(FactDB* db, Bytecode* bc)
         }
     }
     return VM_ERROR;
+}
+
+void collectBytecodeDeps(Bytecode* bc, Arena* ar, const char*** deps, int* count)
+{
+    const char* temp[128];
+    int n = 0;
+    for (int i = 0; i < bc->count; i++)
+    {
+        Instr* in = &bc->code[i];
+        const char* name = NULL;
+        if (in->op == OP_PUSH_FACT || in->op == OP_PUSH_CMP || in->op == OP_PUSH_STR_CMP)
+            name = in->factName;
+        if (!name) continue;
+        bool found = false;
+        for (int j = 0; j < n; j++)
+        {
+            if (strcmp(temp[j], name) == 0) 
+            { 
+                found = true; 
+                break; 
+            }
+        }
+        if (!found) 
+            temp[n++] = name;
+    }
+    const char** arr = arena_alloc(ar, sizeof(char*) * n);
+    memcpy(arr, temp, sizeof(char*) * n);
+    *deps  = arr;
+    *count = n;
 }

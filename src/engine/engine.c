@@ -1,4 +1,10 @@
-#include "engine_internal.h"
+#include "../../include/engine_internal.h"
+
+/* Callback: a fact changed in the FactDB → mark dependent rules dirty. */
+static void on_fact_change(const char* name, void* ctx)
+{
+    rule_engine_mark_fact_dirty((RuleEngine*)ctx, name);
+}
 
 const char* engine_strerror(EngineError err)
 {
@@ -98,6 +104,8 @@ Engine* createEngine(const char* file, FileType type)
             return NULL;
         }
     }
+    factdb_on_change(temp->db, on_fact_change, temp->r_engine);
+
     if (pthread_mutex_init(&temp->lock, NULL) != 0)
     {
         temp->last_error = ENGINE_ERR_MUTEX;
@@ -139,6 +147,30 @@ EngineError runEngine(Engine* e)
 {
     if (!e) return ENGINE_ERR_NULL_ARG;
     runRuleEngine(e->r_engine, e->db);
+    return ENGINE_SUCCESS;
+}
+
+EngineError engine_set_bool_fact(Engine* e, const char* name, bool val)
+{
+    if (!e || !name) return ENGINE_ERR_NULL_ARG;
+    setBoolFact(e->db, name, val);
+    rule_engine_mark_fact_dirty(e->r_engine, name);
+    return ENGINE_SUCCESS;
+}
+
+EngineError engine_set_num_fact(Engine* e, const char* name, double val)
+{
+    if (!e || !name) return ENGINE_ERR_NULL_ARG;
+    setNumFact(e->db, name, val);
+    rule_engine_mark_fact_dirty(e->r_engine, name);
+    return ENGINE_SUCCESS;
+}
+
+EngineError engine_set_string_fact(Engine* e, const char* name, const char* val)
+{
+    if (!e || !name) return ENGINE_ERR_NULL_ARG;
+    setStringFact(e->db, name, val);
+    rule_engine_mark_fact_dirty(e->r_engine, name);
     return ENGINE_SUCCESS;
 }
 

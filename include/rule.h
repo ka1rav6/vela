@@ -30,6 +30,10 @@ Rule* findRule(RuleEngine*, const char* name);
  * action name matches, without exposing the Rule struct's fields directly. */
 void rule_engine_bind_action(RuleEngine* e, const char* action_name, Action_f f, void* ctx);
 
+/* Dirty-track which rules depend on a given fact */
+void rule_engine_mark_fact_dirty(RuleEngine*, const char* fact_name);
+void rule_engine_mark_all_dirty(RuleEngine*);
+
 /* function to access ruleEngine internals*/
 const char* rule_name(const Rule*);
 const char* rule_action(const Rule*);

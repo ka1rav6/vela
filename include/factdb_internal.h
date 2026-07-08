@@ -1,5 +1,5 @@
 #pragma once
-/* PRIVATE header: real layout of FactDB. Internal implementation use only. */
+// PRIVATE header: real layout of FactDB. Internal implementation use only.
 
 #include "factdb.h"
 #include "uthash.h"
@@ -24,12 +24,14 @@ typedef struct {
 } StrFact;
 
 struct FactDB {
-    pthread_rwlock_t lock; /* readers (getX) share, writers (setX) exclusive */
+    pthread_rwlock_t lock; // readers (getX) share, writers (setX) exclusive
     BoolFact* boolFacts;
     NumFact*  numFacts;
     StrFact*  strFacts;
+    FactChangeCB on_change;   // NULL unless registered
+    void* change_data;
 };
 
 bool factdb_has_bool(FactDB* db, const char* name);
-bool factdb_has_num(FactDB* db, const char* name);
-bool factdb_has_str(FactDB* db, const char* name);
+bool factdb_has_num (FactDB* db, const char* name);
+bool factdb_has_str (FactDB* db, const char* name);

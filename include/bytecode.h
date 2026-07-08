@@ -36,5 +36,6 @@ typedef enum {
 
 Bytecode* compileNode(Arena*, Node*);
 VMResult runBytecode(FactDB*, Bytecode*);
+void collectBytecodeDeps(Bytecode*, Arena*, const char*** deps, int* count);
 
 

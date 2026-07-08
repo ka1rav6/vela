@@ -1,6 +1,6 @@
-#include "rule_internal.h"
-#include "arena.h"
-#include "bytecode.h"
+#include "../../include/rule_internal.h"
+#include "../../include/arena.h"
+#include "../../include/bytecode.h"
 
 
 // ----------- ACTUAL FUNCTIONS -------------//
@@ -11,9 +11,13 @@ void runRuleEngine(RuleEngine* e, FactDB* db)
     printf("=== RUNNING RULE ENGINE ===\n");
     pthread_mutex_lock(&e->lock);
     Rule *cr, *tmp;
+    int evaluated = 0;
     HASH_ITER(hh, e->rules, cr, tmp)
     {
+        if (!cr->dirty) continue;
+        evaluated++;
         VMResult result = runBytecode(db, cr->bc);
+        cr->dirty = false;
         if (result == VM_ERROR)
         {
             fprintf(stderr, "VM error evaluating rule: %s\n", cr->ruleName);
@@ -33,18 +37,23 @@ void runRuleEngine(RuleEngine* e, FactDB* db)
         }
     }
     pthread_mutex_unlock(&e->lock);
+    if (evaluated == 0)
+        printf("  (no dirty rules to evaluate)\n");
 }
 
 // simple rule constructor
 Rule* createRule(RuleEngine* e, Node* n, const char* action, const char* name, void* ctx)
 {
     Rule* temp      = (Rule*)arena_alloc(e->arena, sizeof(Rule));
+    memset(temp, 0, sizeof(Rule));
     temp->condition = n;
     temp->bc        = compileNode(e->arena, n);
     temp->action    = arena_strdup(e->arena, action);
     strncpy(temp->ruleName, name, MAX_RULE_NAME - 1);
     temp->ruleName[MAX_RULE_NAME - 1] = '\0';
     temp->ctx       = ctx;
+    temp->dirty     = true;
+    collectBytecodeDeps(temp->bc, e->arena, &temp->deps, &temp->dep_count);
     return temp;
 }
 
@@ -112,6 +121,35 @@ void rule_engine_bind_action(RuleEngine* e, const char* action_name, Action_f f,
             r->func = f;
             r->ctx  = ctx;
         }
+    }
+    pthread_mutex_unlock(&e->lock);
+}
+
+void rule_engine_mark_fact_dirty(RuleEngine* e, const char* fact_name)
+{
+    pthread_mutex_lock(&e->lock);
+    Rule *r, *tmp;
+    HASH_ITER(hh, e->rules, r, tmp)
+    {
+        for (int i = 0; i < r->dep_count; i++)
+        {
+            if (strcmp(r->deps[i], fact_name) == 0)
+            {
+                r->dirty = true;
+                break;
+            }
+        }
+    }
+    pthread_mutex_unlock(&e->lock);
+}
+
+void rule_engine_mark_all_dirty(RuleEngine* e)
+{
+    pthread_mutex_lock(&e->lock);
+    Rule *r, *tmp;
+    HASH_ITER(hh, e->rules, r, tmp)
+    {
+        r->dirty = true;
     }
     pthread_mutex_unlock(&e->lock);
 }
