@@ -9,19 +9,23 @@ jobs:
   build:
     name: Build release artifacts
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
 
     steps:
       - uses: actions/checkout@v4
 
-      - name: Install dependencies
+      - name: Install system dependencies
         run: |
           sudo apt-get update
           sudo apt-get install -y \
             cmake \
             gcc \
-            libyyjson-dev \
-            nodejs \
-            npm
+            libyyjson-dev
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
 
       - name: Configure (Release)
         run: cmake -B build -DCMAKE_BUILD_TYPE=Release
