@@ -1,16 +1,20 @@
 cmake_minimum_required(VERSION 3.10)
-project(rule_engine C)
+project(rule_engine VERSION 1.0.0 LANGUAGES C)
 
+# C Standard
+set(CMAKE_C_STANDARD 11)
+set(CMAKE_C_STANDARD_REQUIRED ON)
+
+# ----- Dependencies -----
 find_library(YYJSON_LIB yyjson REQUIRED)
-
-# Needed for pthread_mutex_t / pthread_rwlock_t used throughout the
-# *_internal.h headers (Arena, FactDB, RuleEngine, Engine).
 find_package(Threads REQUIRED)
-
-# Valgrind for leak checking (used by multiple custom targets below)
 find_program(VALGRIND_EXECUTABLE valgrind)
 
-# ---------- common source files used by both executables ----------
+# ----- Compiler flags -----
+set(CORE_FLAGS -Wall -Wextra -pedantic -std=c11 -D_POSIX_C_SOURCE=200809L)
+set(CORE_INCLUDES ${CMAKE_SOURCE_DIR}/include)
+
+# ----- Core library (static) -----
 set(CORE_SOURCES
     src/engine/factdb.c
     src/engine/rule.c
@@ -24,14 +28,14 @@ set(CORE_SOURCES
     src/engine/readBin.c
 )
 
-set(CORE_INCLUDES ${CMAKE_SOURCE_DIR}/include)
-set(CORE_FLAGS -g -O0 -Wall -Wextra -pedantic -std=c11 -D_POSIX_C_SOURCE=200809L)
+add_library(vela STATIC ${CORE_SOURCES})
+target_include_directories(vela PUBLIC ${CORE_INCLUDES})
+target_compile_options(vela PRIVATE ${CORE_FLAGS})
+target_link_libraries(vela PUBLIC ${YYJSON_LIB} Threads::Threads)
 
-# ===================== Integration test (original) =====================
-add_executable(engine ${CORE_SOURCES} test/testRunner.c)
-target_include_directories(engine PRIVATE ${CORE_INCLUDES})
-target_compile_options(engine PRIVATE ${CORE_FLAGS})
-target_link_libraries(engine PRIVATE ${YYJSON_LIB} Threads::Threads)
+# ----- Demo / integration test runner -----
+add_executable(engine test/testRunner.c)
+target_link_libraries(engine PRIVATE vela)
 
 if(VALGRIND_EXECUTABLE)
     add_custom_target(
@@ -47,11 +51,9 @@ if(VALGRIND_EXECUTABLE)
     )
 endif()
 
-# ===================== Unit tests (greatest.h) =====================
-add_executable(unit_tests ${CORE_SOURCES} test/unit_tests.c)
-target_include_directories(unit_tests PRIVATE ${CORE_INCLUDES})
-target_compile_options(unit_tests PRIVATE ${CORE_FLAGS})
-target_link_libraries(unit_tests PRIVATE ${YYJSON_LIB} Threads::Threads)
+# ----- Unit tests -----
+add_executable(unit_tests test/unit_tests.c)
+target_link_libraries(unit_tests PRIVATE vela)
 
 add_custom_target(
     run_unit_tests
@@ -74,3 +76,26 @@ if(VALGRIND_EXECUTABLE)
         WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
     )
 endif()
+
+# ----- Install -----
+install(TARGETS vela
+    ARCHIVE DESTINATION lib
+)
+install(TARGETS engine
+    RUNTIME DESTINATION bin
+)
+install(DIRECTORY include/
+    DESTINATION include/vela
+    FILES_MATCHING PATTERN "*.h"
+)
+
+# ----- CPack -----
+set(CPACK_PACKAGE_NAME "vela")
+set(CPACK_PACKAGE_VERSION ${PROJECT_VERSION})
+set(CPACK_PACKAGE_DESCRIPTION_SUMMARY "Vela — A High-Performance Embeddable Rule Engine in C")
+set(CPACK_PACKAGE_VENDOR "Vela")
+set(CPACK_PACKAGE_HOMEPAGE_URL "https://github.com/anomalyco/rule_engine")
+set(CPACK_PACKAGE_CONTACT "https://github.com/anomalyco/rule_engine")
+set(CPACK_RESOURCE_FILE_LICENSE ${CMAKE_SOURCE_DIR}/LICENSE)
+set(CPACK_GENERATOR "TGZ;DEB")
+include(CPack)

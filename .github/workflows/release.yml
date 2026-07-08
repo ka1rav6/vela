@@ -1,0 +1,81 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  build:
+    name: Build release artifacts
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            cmake \
+            gcc \
+            libyyjson-dev \
+            nodejs \
+            npm
+
+      - name: Configure (Release)
+        run: cmake -B build -DCMAKE_BUILD_TYPE=Release
+
+      - name: Build C library and tools
+        run: cmake --build build --parallel
+
+      - name: Run unit tests
+        run: cmake --build build --target run_unit_tests
+
+      - name: Run integration test
+        working-directory: build
+        run: ./engine
+
+      - name: Build Vela DSL compiler
+        run: |
+          cd src/velang
+          npm ci
+          npm run build
+
+      - name: Prepare release directory
+        run: |
+          mkdir -p release/velang
+
+          # Strip and copy binaries
+          strip -s build/engine      -o release/vela-engine-linux-x86_64
+          strip -s build/libvela.a   -o release/libvela.a
+
+          # Headers for embedding
+          cp -r include release/headers
+
+          # Vela DSL compiler (compiled JS + source TypeScript)
+          cp -r src/velang/dist          release/velang/dist
+          cp -r src/velang/src           release/velang/src
+          cp  src/velang/package.json    release/velang/
+          cp  src/velang/tsconfig.json   release/velang/
+
+          # Docs and metadata
+          cp README.md     release/
+          cp LICENSE       release/
+          cp RUN_IT.md     release/
+          cp CMakeLists.txt release/
+
+      - name: Create source tarball
+        run: |
+          git archive --format=tar.gz --prefix=vela-${GITHUB_REF_NAME}/ \
+            -o vela-source.tar.gz \
+            ${GITHUB_REF_NAME}
+
+      - name: Upload release assets
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            release/vela-engine-linux-x86_64
+            release/libvela.a
+            vela-source.tar.gz
+          generate_release_notes: true

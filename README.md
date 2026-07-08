@@ -3,6 +3,86 @@
 > **Compile once, evaluate at bitmask speed. Only re-evaluate what changed.**
 > **Zero interpreter overhead. Zero wasted cycles.**
 
+Vela is a **compiled** rule engine, not an interpreted one.
+
+---
+
+## Download & Usage
+
+Download the [latest release](https://github.com/anomalyco/rule_engine/releases/latest) — you'll get:
+
+| Asset | Description |
+|-------|-------------|
+| `vela-engine-linux-x86_64` | Pre-built demo binary (run with `./vela-engine-linux-x86_64`) |
+| `libvela.a` | Static library for embedding in your own C programs |
+| `vela-source.tar.gz` | Full source tarball |
+
+### Option 1 — Embed in your own C project (with CMake)
+
+Download the source tarball and add Vela as a subdirectory:
+
+```bash
+tar xzf vela-source.tar.gz
+cd vela-1.0.0
+cmake -B build -DCMAKE_BUILD_TYPE=Release
+cmake --build build --parallel
+sudo cmake --install build    # installs libvela.a → /usr/local/lib, headers → /usr/local/include/vela
+```
+
+Then in your project's `CMakeLists.txt`:
+
+```cmake
+find_library(VELA_LIB vela REQUIRED)
+find_library(YYJSON_LIB yyjson REQUIRED)
+find_package(Threads REQUIRED)
+
+target_include_directories(myapp PRIVATE /usr/local/include)
+target_link_libraries(myapp PRIVATE ${VELA_LIB} ${YYJSON_LIB} Threads::Threads)
+```
+
+Or add Vela directly as a CMake subdirectory:
+
+```cmake
+add_subdirectory(vela-1.0.0)
+target_link_libraries(myapp PRIVATE vela)
+```
+
+### Option 2 — Embed without CMake
+
+```bash
+gcc -I/usr/local/include myapp.c -lvela -lyyjson -lpthread -o myapp
+```
+
+### Option 3 — Run the demo
+
+```bash
+# Pre-built binary
+curl -LO https://github.com/anomalyco/rule_engine/releases/latest/download/vela-engine-linux-x86_64
+chmod +x vela-engine-linux-x86_64
+./vela-engine-linux-x86_64
+
+# Or build from source
+cmake -B build -DCMAKE_BUILD_TYPE=Release
+cmake --build build --parallel
+./build/engine
+```
+
+### Option 4 — Use the Vela DSL compiler (TypeScript)
+
+```bash
+cd vela-1.0.0/velang
+npm install
+node dist/vela.js myrules.vela     # produces myrules.velabc
+```
+
+Then load the bytecode in C:
+
+```c
+Engine* e = createEngine("myrules.velabc", BYTECODE);
+```
+
+---
+
 Vela is a **compiled** rule engine, not an interpreted one. Your rules — written as JSON or in the Vela DSL — are parsed into an AST, compiled to a flat bytecode instruction sequence, and executed by a tiny stack-machine VM. Every rule statically declares which facts it reads, so when a fact changes, Vela marks **only the affected rules** as dirty — and the next `runEngine()` evaluates only those. The result: rule evaluation faster than tree-walking engines, smarter about what to re-evaluate, and simpler to embed than full scripting languages.
 
 ---
@@ -10,7 +90,7 @@ Vela is a **compiled** rule engine, not an interpreted one. Your rules — writt
 ## 🚀 Quick Start
 
 ```c
-#include "engine.h"
+#include "vela/engine.h"
 
 void on_grant_access(FactDB* db, void* ctx) {
     printf("Access granted: %s\n", (char*)ctx);
@@ -27,9 +107,8 @@ int main(void) {
 ```
 
 ```bash
-mkdir build && cd build
-cmake .. && make
-./engine
+gcc -I/usr/local/include myapp.c -lvela -lyyjson -lpthread -o myapp
+./myapp
 ```
 
 ---
@@ -545,18 +624,17 @@ Vela is the only option that compiles rules to bytecode, manages all memory from
 
 ```bash
 # Install yyjson (Debian/Ubuntu)
-sudo apt install libyyjson-dev
+sudo apt install cmake gcc libyyjson-dev
 
 # Build
-mkdir build && cd build
-cmake .. -DCMAKE_BUILD_TYPE=Release
-make -j$(nproc)
+cmake -B build -DCMAKE_BUILD_TYPE=Release
+cmake --build build --parallel
 
 # Run tests
-./engine
+./build/engine
 
 # Memory check
-make valgrind
+cmake --build build --target valgrind
 ```
 
 ### CMake Options
