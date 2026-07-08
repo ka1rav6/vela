@@ -1,0 +1,38 @@
+name: C CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            cmake \
+            gcc \
+            libyyjson-dev \
+            valgrind
+
+      - name: Configure
+        run: cmake -B build -S .
+
+      - name: Build
+        run: cmake --build build --parallel
+
+      - name: Run unit tests
+        run: cmake --build build --target run_unit_tests
+
+      - name: Run integration test
+        run: ./build/engine
+
+      - name: Run Valgrind
+        run: cmake --build build --target valgrind_unit_tests
