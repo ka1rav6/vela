@@ -18,7 +18,8 @@ char* ask_memory(size_t size)
 
 Arena* createArena(size_t size)
 {
-    assert(size != 0);
+    if (size == 0)
+        return NULL;
     Arena* ar = (Arena*)malloc(sizeof(Arena));
     if (!ar)
         return NULL;

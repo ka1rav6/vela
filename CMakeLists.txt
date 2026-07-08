@@ -6,7 +6,14 @@ set(CMAKE_C_STANDARD 11)
 set(CMAKE_C_STANDARD_REQUIRED ON)
 
 # ----- Dependencies -----
-find_library(YYJSON_LIB yyjson REQUIRED)
+include(FetchContent)
+FetchContent_Declare(
+    yyjson
+    GIT_REPOSITORY https://github.com/ibireme/yyjson.git
+    GIT_TAG        0.10.0
+)
+FetchContent_MakeAvailable(yyjson)
+
 find_package(Threads REQUIRED)
 find_program(VALGRIND_EXECUTABLE valgrind)
 
@@ -31,7 +38,7 @@ set(CORE_SOURCES
 add_library(vela STATIC ${CORE_SOURCES})
 target_include_directories(vela PUBLIC ${CORE_INCLUDES})
 target_compile_options(vela PRIVATE ${CORE_FLAGS})
-target_link_libraries(vela PUBLIC ${YYJSON_LIB} Threads::Threads)
+target_link_libraries(vela PUBLIC yyjson Threads::Threads)
 
 # ----- Demo / integration test runner -----
 add_executable(engine test/testRunner.c)
@@ -47,7 +54,7 @@ if(VALGRIND_EXECUTABLE)
                 --verbose
                 $<TARGET_FILE:engine>
         DEPENDS engine
-        WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
+        WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
     )
 endif()
 
@@ -59,7 +66,7 @@ add_custom_target(
     run_unit_tests
     COMMAND $<TARGET_FILE:unit_tests>
     DEPENDS unit_tests
-    WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
+    WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
 )
 
 if(VALGRIND_EXECUTABLE)
@@ -73,7 +80,7 @@ if(VALGRIND_EXECUTABLE)
                 --error-exitcode=1
                 $<TARGET_FILE:unit_tests>
         DEPENDS unit_tests
-        WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
+        WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
     )
 endif()
 

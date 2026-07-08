@@ -19,7 +19,6 @@ jobs:
           sudo apt-get install -y \
             cmake \
             gcc \
-            libyyjson-dev \
             valgrind
 
       - name: Configure
