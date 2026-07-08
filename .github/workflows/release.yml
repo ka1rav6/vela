@@ -46,18 +46,20 @@ jobs:
         run: |
           mkdir -p release/velang
 
-          # Strip and copy binaries
-          strip -s build/engine      -o release/vela-engine-linux-x86_64
-          strip -s build/libvela.a   -o release/libvela.a
+          # Strip debug info from demo binary
+          strip -s build/engine -o release/vela-engine-linux-x86_64
+
+          # Copy static library (Release build already has no debug info)
+          cp build/libvela.a release/libvela.a
 
           # Headers for embedding
           cp -r include release/headers
 
-          # Vela DSL compiler (compiled JS + source TypeScript)
-          cp -r src/velang/dist          release/velang/dist
-          cp -r src/velang/src           release/velang/src
-          cp  src/velang/package.json    release/velang/
-          cp  src/velang/tsconfig.json   release/velang/
+          # Vela DSL compiler (compiled JS + TypeScript source)
+          cp -r src/velang/dist           release/velang/dist
+          cp  src/velang/*.ts             release/velang/
+          cp  src/velang/package.json     release/velang/
+          cp  src/velang/tsconfig.json    release/velang/
 
           # Docs and metadata
           cp README.md     release/
