@@ -1,8 +1,9 @@
 # ⚡ Vela — A High-Performance Embeddable Rule Engine in C
 
-> **Compile once, evaluate at bitmask speed. Zero interpreter overhead at runtime.**
+> **Compile once, evaluate at bitmask speed. Only re-evaluate what changed.**
+> **Zero interpreter overhead. Zero wasted cycles.**
 
-Vela is a **compiled** rule engine, not an interpreted one. Your rules — written as JSON or in the Vela DSL — are parsed into an AST, compiled to a flat bytecode instruction sequence, and executed by a tiny stack-machine VM. The result: rule evaluation that's faster than tree-walking engines and simpler to embed than full scripting languages.
+Vela is a **compiled** rule engine, not an interpreted one. Your rules — written as JSON or in the Vela DSL — are parsed into an AST, compiled to a flat bytecode instruction sequence, and executed by a tiny stack-machine VM. Every rule statically declares which facts it reads, so when a fact changes, Vela marks **only the affected rules** as dirty — and the next `runEngine()` evaluates only those. The result: rule evaluation faster than tree-walking engines, smarter about what to re-evaluate, and simpler to embed than full scripting languages.
 
 ---
 
@@ -42,9 +43,11 @@ cmake .. && make
 - [Bytecode VM Design](#-bytecode-vm-design)
 - [Memory Model: Arena Allocator](#-memory-model-arena-allocator)
 - [Thread Safety](#-thread-safety)
+- [Smart Dependency Tracking](#-smart-dependency-tracking)
 - [Action Registry](#-action-registry)
 - [Vela DSL (Custom Language)](#-vela-dsl-custom-language)
 - [Performance Characteristics](#-performance-characteristics)
+  - [Comparison with Alternatives](#comparison-with-alternatives)
 - [Build System & Dependencies](#-build-system--dependencies)
 - [Roadmap](#-roadmap)
 - [FAQ](#-faq)
@@ -61,6 +64,7 @@ cmake .. && make
 | **Actions coupled to engine** | Action registry: JSON names actions, C code defines callbacks |
 | **No safety net for malformed rules** | Semantic checker catches type errors, missing facts, duplicates at parse time |
 | **Thread safety is an afterthought** | Per-component locks (mutex + rwlock) from day one |
+| **Every fact change re-evaluates ALL rules** | Per-rule dependency map: changed facts mark only dependent rules dirty; `runRuleEngine()` skips pristine rules entirely |
 
 Vela is built for **latency-sensitive** environments: game servers, real-time fraud detection, IoT edge devices, and any system where evaluating 100+ rules per millisecond matters.
 
@@ -84,11 +88,13 @@ Vela is built for **latency-sensitive** environments: game servers, real-time fr
 │  │  ┌────────────────────────────────────────────────────────┐  │   │
 │  │  │  Rules (uthash, keyed by name)                        │  │   │
 │  │  │  ┌──────────────────────────────────────────┐         │  │   │
-│  │  │  │ Rule "admin_check"                        │         │  │   │
-│  │  │  │   condition  ───► Node* (AST, arena)      │         │  │   │
-│  │  │  │   bytecode   ───► Instr[]  (arena)        │         │  │   │
-│  │  │  │   action: "GRANT_ACCESS"                  │         │  │   │
-│  │  │  │   func:  ───► on_grant_access()           │         │  │   │
+│  │  │  │ Rule "admin_check"                        │         │  │  │
+│  │  │  │   condition  ───► Node* (AST, arena)      │         │  │  │
+│  │  │  │   bytecode   ───► Instr[]  (arena)        │         │  │  │
+│  │  │  │   deps[]     ───► {"isAdmin","age"}       │         │  │  │
+│  │  │  │   dirty      ───► false                   │         │  │  │
+│  │  │  │   action: "GRANT_ACCESS"                  │         │  │  │
+│  │  │  │   func:  ───► on_grant_access()           │         │  │  │
 │  │  │  └──────────────────────────────────────────┘         │  │   │
 │  │  │  ┌──────────────────────────────────────────┐         │  │   │
 │  │  │  │ Rule "age_check"                          │         │  │   │
@@ -113,7 +119,7 @@ Vela is built for **latency-sensitive** environments: game servers, real-time fr
 | **`FactDB`** | `factdb.c/h` | Thread-safe fact storage: uthash for bools and numerics, rwlock-protected |
 | **`RuleEngine`** | `rule.c/h` | Rule hash table, iteration, action binding, visitor pattern |
 | **`ConditionTree`** | `ConditionTree.c/h` | AST node types (`AND`, `OR`, `NOT`, `FACT`, `COMPARE`) |
-| **`Bytecode`** | `bytecode.c/h` | AST → flat instruction compiler + stack-machine VM |
+| **`Bytecode`** | `bytecode.c/h` | AST → flat instruction compiler + stack-machine VM + dependency extraction |
 | **`Parser`** | `parser_engine.c/h` | JSON reader (yyjson) → AST builder |
 | **`SemanticChecker`** | `semanticChecker.c/h` | Validation: operators, types, existence, duplicates |
 | **`ActionEntry`** | `ActionEntry.c/h` | String → function pointer registry |
@@ -181,7 +187,17 @@ Each `Node` becomes 1 or 2 instructions. The tree is kept (for debugging via `pr
 
 ### Step 4: Evaluate
 
-`runEngine()` iterates every rule in the hash table, calls `runBytecode()` on the rule's instruction array:
+`runEngine()` calls `runRuleEngine()`, which iterates the rule hash table but **skips every rule whose `dirty` flag is `false`**. Only dirty rules get their bytecode evaluated:
+
+```
+for each rule:
+    if !rule.dirty → skip
+    result = runBytecode(db, rule.bc)
+    rule.dirty = false
+    if result == TRUE → fire action callback
+```
+
+For a rule that IS dirty, the VM executes its instruction array:
 
 ```
 stack: [ ]
@@ -367,6 +383,69 @@ Vela is designed for concurrent use from the ground up:
 
 ---
 
+## 🔗 Smart Dependency Tracking
+
+Most rule engines re-evaluate **every rule** every time a fact changes. Vela is smarter — it tracks which facts each rule depends on and only re-evaluates what's necessary.
+
+### How It Works
+
+```
+setBoolFact(db, "isAdmin", false)
+    │
+    ▼
+FactDB::on_change("isAdmin")              ← callback fires
+    │
+    ▼
+rule_engine_mark_fact_dirty("isAdmin")    ← scan all rule .deps[]
+    │                                        for "isAdmin"
+    ▼
+Rule "admin_check".dirty = true           ← only matching rules
+Rule "guest_check".dirty = true             get marked
+Rule "age_check".dirty = false             ← untouched
+    │
+    ▼
+runEngine() → runRuleEngine()
+    │
+    ▼
+for each Rule:
+  if !rule.dirty → skip ◄── 0(1) bool check
+  runBytecode(db, rule.bc)
+  rule.dirty = false
+  if result == TRUE → fire action
+```
+
+### Dependency Collection
+
+At rule creation time, `collectBytecodeDeps()` scans the compiled bytecode and extracts the set of unique fact names referenced by `OP_PUSH_FACT`, `OP_PUSH_CMP`, and `OP_PUSH_STR_CMP` instructions:
+
+```c
+// Per-rule, stored in the arena alongside the AST and bytecode
+struct Rule {
+    // ...
+    const char** deps;    // ["isAdmin", "age", "balance"]
+    int dep_count;        // 3
+    bool dirty;           // false = already evaluated, needs a change
+};
+```
+
+### The Dirty Pipeline
+
+| Stage | What Happens |
+|-------|-------------|
+| **`set*Fact()`** | Updates the FactDB value, then fires the `on_change` callback |
+| **`on_fact_change()`** | Bridges FactDB → RuleEngine: calls `rule_engine_mark_fact_dirty(fact_name)` |
+| **`rule_engine_mark_fact_dirty()`** | Walks the rule hash table, checks each rule's `deps[]`, sets `dirty = true` on matches |
+| **`rule_engine_mark_all_dirty()`** | Forces all rules dirty — useful after bulk fact loads |
+| **`runRuleEngine()`** | Iterates rules, skips any with `dirty == false`, evaluates the rest, clears dirty |
+
+### Why This Matters
+
+In a typical workload — 500 rules, 200 facts, 10 fact changes per frame — without dependency tracking you evaluate 500 × 10 = 5,000 conditions. With Vela's dependency tracking, a fact like `"isAdmin"` typically affects 2-5 rules. That's **50-100× fewer evaluations**.
+
+The cost: one `strcmp` per rule per changed fact to scan `deps[]`. For 500 rules × 10 changes, that's 5,000 string comparisons — ≈5 µs on modern hardware, far less than the bytecode evaluation it saves.
+
+---
+
 ## 🎬 Action Registry
 
 Rather than hardcoding action dispatch in a switch statement, Vela uses a **registry pattern**:
@@ -433,18 +512,19 @@ Engine* e = createEngine("rules.velabc", BYTECODE);
 | **Max rules** | 1000 (configurable) | Hash table, `MAX_RULES` in `rule.h` |
 | **Max facts** | 300 (configurable) | `MAX_FACTS` in `factdb.h` |
 | **Thread overhead** | Negligible | RW locks are uncontended in read-heavy workloads |
+| **Incremental eval** | ~0 ns (skipped) | Non-dirty rules bypass the VM entirely — just a bool check |
 
 ### Comparison with Alternatives
 
-| Engine | Evaluation | Memory Model | Embeddable | Thread-Safe |
-|--------|-----------|-------------|------------|-------------|
-| **Vela** | Bytecode VM | Arena + uthash | ✅ (C library) | ✅ |
-| **Drools** | RETE network | GC heap | ❌ (JVM) | ✅ |
-| **json-rules-engine** | Tree-walk | JS heap | ❌ (Node) | ❌ (single-threaded) |
-| **Ruleby** | Custom | Ruby heap | ❌ (MRI) | ❌ |
-| **EasyRules** | Tree-walk | Java heap | ❌ (JVM) | ❌ |
+| Engine | Evaluation | Incremental | Memory Model | Embeddable | Thread-Safe |
+|--------|-----------|-------------|-------------|------------|-------------|
+| **Vela** | Bytecode VM | ✅ Dependency-tracked, per-rule dirty flag | Arena + uthash | ✅ (C library) | ✅ |
+| **Drools** | RETE network | ✅ (built into RETE) | GC heap | ❌ (JVM) | ✅ |
+| **json-rules-engine** | Tree-walk | ❌ (all rules, every time) | JS heap | ❌ (Node) | ❌ (single-threaded) |
+| **Ruleby** | Custom | ❌ | Ruby heap | ❌ (MRI) | ❌ |
+| **EasyRules** | Tree-walk | ❌ (all rules, every time) | Java heap | ❌ (JVM) | ❌ |
 
-Vela is the only option that compiles rules to bytecode, manages all memory from a linear arena, and exposes a plain-C API with zero runtime dependencies (beyond libc and pthreads).
+Vela is the only option that compiles rules to bytecode, manages all memory from a linear arena, has first-class incremental evaluation, and exposes a plain-C API with zero runtime dependencies (beyond libc and pthreads).
 
 ---
 
@@ -503,11 +583,15 @@ make valgrind
 - [x] Binary bytecode format (.velabc) and loader
 - [x] Vela DSL: TypeScript lexer, parser, bytecode compiler
 - [x] 27-rule test suite with pass/fail assertions
+- [x] **Per-rule dependency tracking** — `collectBytecodeDeps()` extracts fact names from bytecode at compile time
+- [x] **FactDB change callback** — fact mutations automatically mark dependent rules dirty
+- [x] **Incremental re-evaluation** — `runRuleEngine()` skips non-dirty rules (0(1) bool check per rule)
+- [x] String fact support with `==` / `!=` comparison
 
 ### In Progress 🔄
 - [ ] **Bitmask boolean facts** — encode bools as bitfields instead of hash table entries
 - [ ] **Compile comparisons to derived booleans** — `age > 18` → derived `_age_gt_18` fact bit
-- [ ] **Rule-level dependency tracking** — only re-evaluate rules whose facts changed
+- [ ] **Reverse dependency index** — `fact_name → [{rule, callback}]` for 0(1) dirty-marking instead of linear scan
 
 ### Planned 📋
 - [ ] `BETWEEN` and `IN` operators
@@ -517,6 +601,8 @@ make valgrind
 - [ ] C++ wrapper header
 - [ ] Rule conflict detection (two rules with contradictory conditions/actions)
 - [ ] Profile-guided optimization of bytecode layout
+- [ ] Batch fact updates with single dirty flush
+- [ ] Lazy evaluation: skip rule if a short-circuit operand is already known
 
 ---
 
@@ -526,7 +612,7 @@ make valgrind
 A: Scripting languages pull in an entire runtime (VM, GC, standard library). Vela is a single header/source library with no runtime beyond libc+pthreads. A Lua state is ~50KB; Vela's entire compiled engine is smaller.
 
 **Q: Can I update facts at runtime?**  
-A: Yes. `setBoolFact()` and `setNumFact()` are public API. Call them anytime, then `runEngine()` re-evaluates all rules against the new state.
+A: Yes. `engine_set_bool_fact()`, `engine_set_num_fact()`, and `engine_set_string_fact()` update the FactDB and automatically mark dependent rules dirty. When you call `runEngine()`, only the affected rules are re-evaluated — untouched rules are skipped in 0(1) time.
 
 **Q: What happens if no action handler is registered?**  
 A: The rule evaluates but no callback fires. A warning is printed (can be disabled). This is useful for debugging — you can inspect which rules would fire before wiring actions.
