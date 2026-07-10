@@ -96,6 +96,9 @@ install(DIRECTORY include/
     FILES_MATCHING PATTERN "*.h"
 )
 
+# ----- Benchmarks -----
+add_subdirectory(bench)
+
 # ----- CPack -----
 set(CPACK_PACKAGE_NAME "vela")
 set(CPACK_PACKAGE_VERSION ${PROJECT_VERSION})
