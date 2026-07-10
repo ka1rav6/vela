@@ -43,7 +43,7 @@ def gen_rules(n_rules, n_facts, pattern="simple"):
     return {"facts": facts, "rules": rules}
 
 def main():
-    parser = argparse.ArgumentParser(description="Generate Vela rule JSON for benchmarks")
+    parser = argparse.ArgumentParser(description="Generate Velang rule JSON for benchmarks")
     parser.add_argument("--rules", type=int, default=100, help="Number of rules")
     parser.add_argument("--facts", type=int, default=50, help="Number of facts")
     parser.add_argument("--pattern", choices=["simple", "and_cmp", "nested"], default="and_cmp")

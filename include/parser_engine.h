@@ -7,7 +7,7 @@
 #include "arena.h"
 
 typedef enum {
-    VELA,
+    VELANG,
     JSON,
 }FileType;
 

@@ -152,7 +152,7 @@ def plot_compare_results(results):
 def main():
     results = load_results()
 
-    print("Vela Benchmark Results")
+    print("Velang Benchmark Results")
     print(f"  {len(results)} benchmarks recorded\n")
 
     table_output(results)

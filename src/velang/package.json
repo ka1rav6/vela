@@ -1,7 +1,7 @@
 {
     "name": "velang",
     "version": "0.1.0",
-    "description": "Vela rule engine custom language lexer",
+    "description": "Velang rule engine custom language lexer",
     "type": "module",
     "scripts": {
         "build": "tsc",

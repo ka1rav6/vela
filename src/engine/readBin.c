@@ -1,8 +1,8 @@
 #include "../../include/rule_internal.h"
 #include "../../include/bytecode.h"
 
-#define VELABC_MAGIC    0x524C4542
-#define VELABC_VERSION  3
+#define VELANG_MAGIC    0x524C4542
+#define VELANG_VERSION  3
 
 static uint32_t read_u32le(const uint8_t* buf)
 {
@@ -47,13 +47,13 @@ RuleEngine* loadBytecode(const char* file, FactDB* db, EngineError* err)
     uint32_t instrCount = read_u32le(header + 8);
     uint32_t ruleCount  = read_u32le(header + 12);
 
-    if (magic != VELABC_MAGIC)
+    if (magic != VELANG_MAGIC)
     {
         if (err) *err = ENGINE_ERR_INVALID_MAGIC;
         fclose(fp);
         return NULL;
     }
-    if (version != VELABC_VERSION)
+    if (version != VELANG_VERSION)
     {
         if (err) *err = ENGINE_ERR_INVALID_VERSION;
         fclose(fp);

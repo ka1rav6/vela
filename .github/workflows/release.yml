@@ -32,7 +32,7 @@ jobs:
         with:
           node-version: '22'
 
-      - name: Build Vela DSL compiler
+      - name: Build Velang DSL compiler
         run: |
           cd src/velang
           npm install
@@ -56,7 +56,7 @@ jobs:
           cp src/velang/package-lock.json velang-bundle/
           cp src/velang/tsconfig.json velang-bundle/
           cp -r src/velang/dist velang-bundle/dist
-          tar czf vela-dsl-velang.tar.gz -C velang-bundle .
+          tar czf velang-dsl.tar.gz -C velang-bundle .
 
       - name: Create source tarball
         run: git archive --format=tar.gz --prefix=vela-${GITHUB_REF_NAME}/ -o vela-source.tar.gz ${GITHUB_REF_NAME}
@@ -67,6 +67,6 @@ jobs:
           files: |
             release/vela-engine-linux-x86_64
             release/libvela.a
-            vela-dsl-velang.tar.gz
+            velang-dsl.tar.gz
             vela-source.tar.gz
           generate_release_notes: true

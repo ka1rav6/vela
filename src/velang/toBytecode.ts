@@ -126,7 +126,7 @@ export default function toBytecode(fileName: string, program: Program): void {
         ruleCount++;
     }
     const header     = createHeader(0x524C4542, 3, instrCount, ruleCount);
-    const final_file = fileName + ".velabc";
+    const final_file = fileName + ".velangbc";
     writeFileSync(final_file, Buffer.concat([header, ...chunks]));
 }
 

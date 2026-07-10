@@ -67,23 +67,23 @@ cmake --build build --parallel
 ./build/engine
 ```
 
-### Option 4 — Use the Vela DSL compiler (TypeScript)
+### Option 4 — Use the Velang compiler (TypeScript)
 
 ```bash
 cd vela-1.0.0/velang
 npm install
-node dist/vela.js myrules.vela     # produces myrules.velabc
+node dist/velang.js myrules.velang     # produces myrules.velangbc
 ```
 
 Then load the bytecode in C:
 
 ```c
-Engine* e = createEngine("myrules.velabc", BYTECODE);
+Engine* e = createEngine("myrules.velangbc", BYTECODE);
 ```
 
 ---
 
-Vela is a **compiled** rule engine, not an interpreted one. Your rules — written as JSON or in the Vela DSL — are parsed into an AST, compiled to a flat bytecode instruction sequence, and executed by a tiny stack-machine VM. Every rule statically declares which facts it reads, so when a fact changes, Vela marks **only the affected rules** as dirty — and the next `runEngine()` evaluates only those. The result: rule evaluation faster than tree-walking engines, smarter about what to re-evaluate, and simpler to embed than full scripting languages.
+Vela is a **compiled** rule engine, not an interpreted one. Your rules — written as JSON or in Velang — are parsed into an AST, compiled to a flat bytecode instruction sequence, and executed by a tiny stack-machine VM. Every rule statically declares which facts it reads, so when a fact changes, Vela marks **only the affected rules** as dirty — and the next `runEngine()` evaluates only those. The result: rule evaluation faster than tree-walking engines, smarter about what to re-evaluate, and simpler to embed than full scripting languages.
 
 ---
 
@@ -124,7 +124,7 @@ gcc -I/usr/local/include myapp.c -lvela -lyyjson -lpthread -o myapp
 - [Thread Safety](#-thread-safety)
 - [Smart Dependency Tracking](#-smart-dependency-tracking)
 - [Action Registry](#-action-registry)
-- [Vela DSL (Custom Language)](#-vela-dsl-custom-language)
+- [Velang (Custom Language)](#-velang-custom-language)
 - [Performance Characteristics](#-performance-characteristics)
   - [Comparison with Alternatives](#comparison-with-alternatives)
 - [Build System & Dependencies](#-build-system--dependencies)
@@ -203,7 +203,7 @@ Vela is built for **latency-sensitive** environments: game servers, real-time fr
 | **`SemanticChecker`** | `semanticChecker.c/h` | Validation: operators, types, existence, duplicates |
 | **`ActionEntry`** | `ActionEntry.c/h` | String → function pointer registry |
 | **`Arena`** | `arena.c/h` | mmap-backed bump allocator for all rule-engine memory |
-| **`readBin`** | `readBin.c` | Binary `.velabc` bytecode loader |
+| **`readBin`** | `readBin.c` | Binary `.velangbc` bytecode loader |
 | **`uthash`** | `uthash.h` | Vendored hash-table macros (public domain) |
 
 ---
@@ -387,7 +387,7 @@ for (int pc = 0; pc < bc->count; pc++) {
 
 No function calls per node, no recursion, no dynamic dispatch — just a pure `switch` hot loop. Each rule's bytecode fits in a single cache line for simple conditions.
 
-### Binary Format (`.velabc`)
+### Binary Format (`.velangbc`)
 
 ```
 ┌──────────────────────────────────────────────────┐
@@ -543,11 +543,11 @@ Registration works **before or after** `createEngine()`. If registered after, `r
 
 ---
 
-## 📜 Vela DSL (Custom Language)
+## 📜 Velang (Custom Language)
 
-Beyond JSON, rules can be written in a custom language (`.vela` files):
+Beyond JSON, rules can be written in a custom language (`.velang` files):
 
-```vela
+```velang
 # Fact declarations
 FACT isAdmin = true
 FACT age     = 25
@@ -560,7 +560,7 @@ RULE complex_check -> SEND_ALERT
     COND NOT (isBanned OR isGuest) AND (balance >= 1000 OR isPremium)
 ```
 
-The language is lexed and parsed in **TypeScript** (`src/velang/`), then compiled to the same `.velabc` binary bytecode format. This gives you:
+The language is lexed and parsed in **TypeScript** (`src/velang/`), then compiled to the same `.velangbc` binary bytecode format. This gives you:
 
 - **Type-checked** syntax with clear error messages
 - **Comments** with `#`
@@ -570,13 +570,13 @@ The language is lexed and parsed in **TypeScript** (`src/velang/`), then compile
 ```bash
 cd src/velang
 npm run build
-node dist/vela.js rules.vela   # produces rules.velabc
+node dist/velang.js rules.velang   # produces rules.velangbc
 ```
 
 Then load the bytecode directly in C:
 
 ```c
-Engine* e = createEngine("rules.velabc", BYTECODE);
+Engine* e = createEngine("rules.velangbc", BYTECODE);
 ```
 
 ---
@@ -658,8 +658,8 @@ cmake --build build --target valgrind
 - [x] Arena allocator (mmap-backed, thread-safe)
 - [x] Action registry with retroactive binding
 - [x] JSON parser via yyjson
-- [x] Binary bytecode format (.velabc) and loader
-- [x] Vela DSL: TypeScript lexer, parser, bytecode compiler
+- [x] Binary bytecode format (.velangbc) and loader
+- [x] Velang: TypeScript lexer, parser, bytecode compiler
 - [x] 27-rule test suite with pass/fail assertions
 - [x] **Per-rule dependency tracking** — `collectBytecodeDeps()` extracts fact names from bytecode at compile time
 - [x] **FactDB change callback** — fact mutations automatically mark dependent rules dirty
